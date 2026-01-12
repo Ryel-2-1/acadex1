@@ -1,10 +1,10 @@
 <?php
 session_start();
 // Security Check
-if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
-    // header("Location: index.php"); // Uncomment when login is ready
-    // exit();
-}
+// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
+//    header("Location: teacher_login.php");
+//    exit();
+// }
 ?>
 
 <!DOCTYPE html>
@@ -12,23 +12,23 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TechHub - Classwork</title>
+<title>TechHub - Classes</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://meet.jit.si/external_api.js"></script>
 
 <style>
-    /* --- GENERAL RESET & STYLES --- */
+    /* --- GENERAL RESET --- */
     body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; height: 100vh; display: flex; flex-direction: column; }
     * { box-sizing: border-box; }
 
     /* --- HEADER --- */
     header { background: white; padding: 0 40px; height: 70px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; z-index: 100; }
-    .logo-section { display: flex; align-items: center; gap: 10px; width: 250px; }
+    .logo-section { display: flex; align-items: center; gap: 10px; width: 250px; cursor: pointer; }
     .logo-icon { font-size: 32px; color: #1a73e8; }
     .logo-text { font-size: 24px; font-weight: 700; color: #000; }
     .nav-links { display: flex; gap: 30px; height: 100%; }
-    .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #5f6368; font-weight: 500; height: 100%; cursor: pointer; }
+    .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; height: 100%; cursor: pointer; }
     .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
     .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
     .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
@@ -39,7 +39,6 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
     .sidebar-item { display: flex; align-items: center; gap: 18px; padding: 12px 30px; color: #5f6368; font-weight: 500; cursor: pointer; border-radius: 0 50px 50px 0; margin-right: 10px; transition: background 0.2s; }
     .sidebar-item:hover { background: #f5f5f5; }
     .sidebar-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
-    .sidebar-item.active i { color: #1a73e8; }
     .sidebar-item i { width: 24px; text-align: center; font-size: 20px; }
 
     .main-content { flex: 1; padding: 30px 50px; overflow-y: auto; background: white; position: relative; }
@@ -47,539 +46,477 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
     .section-view.active-section { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* --- STREAM BANNER & JITSI --- */
-    .class-banner { height: 200px; border-radius: 8px; background-image: url('https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'); background-size: cover; background-position: center; position: relative; margin-bottom: 25px; }
+    /* --- CLASS GRID --- */
+    .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .action-header h2 { margin: 0; font-weight: 400; font-size: 24px; color: #333; }
+    .create-btn { background: #1a73e8; color: white; border: none; padding: 10px 24px; border-radius: 25px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    
+    .class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .class-card { background: transparent; cursor: pointer; transition: transform 0.2s; position: relative; }
+    .class-card:hover { transform: translateY(-3px); }
+    .class-image { width: 100%; height: 160px; background-color: #ddd; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .class-image img { width: 100%; height: 100%; object-fit: cover; }
+    .class-text-content { padding: 0 5px; }
+    .class-title { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #000; margin-bottom: 2px; }
+    .class-subtitle { font-size: 12px; color: #666; font-weight: 500; }
+
+    /* --- INSIDE CLASS VIEW --- */
+    .class-banner { height: 240px; border-radius: 8px; background-image: url('https://gstatic.com/classroom/themes/img_read.jpg'); background-size: cover; background-position: center; position: relative; margin-bottom: 25px; }
     .class-banner-content { position: absolute; bottom: 20px; left: 25px; right: 25px; color: white; display: flex; justify-content: space-between; align-items: flex-end; }
-    .class-banner-content h1 { margin: 0; font-size: 2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-    .virtual-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 1px solid white; padding: 10px 20px; border-radius: 4px; font-weight: 500; display: flex; align-items: center; gap: 10px; backdrop-filter: blur(5px); cursor: pointer; transition: 0.2s; }
-    .virtual-btn:hover { background-color: white; color: #1a73e8; }
-
-    /* --- CLASSWORK ITEMS --- */
-    .create-wrapper { margin-bottom: 40px; position: relative; }
-    .create-btn { background: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 28px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-    .dropdown-menu { display: none; position: absolute; top: 55px; left: 0; width: 280px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000; }
-    .dropdown-item { display: flex; align-items: center; gap: 20px; padding: 12px 24px; cursor: pointer; color: #3c4043; }
-    .dropdown-item:hover { background: #f5f5f5; }
-
-    .stream-item { background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 20px; transition: 0.2s; }
-    .stream-item:hover { box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .item-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; flex-shrink: 0; }
-    .icon-quiz { background: #1a73e8; }
-    .icon-assign { background: #e37400; }
-    .icon-quest { background: #a142f4; }
-    .item-content { flex: 1; }
-    .item-title { font-weight: 600; color: #3c4043; margin-bottom: 4px; }
-    .item-meta { font-size: 0.85rem; color: #5f6368; }
-
-    /* QUIZ CARDS */
-    .quiz-question-card { border-bottom: 1px solid #eee; padding: 25px 0; }
-    .q-title { font-weight: 700; margin-bottom: 10px; }
-    .q-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .q-opt { background: #fafafa; padding: 10px; border: 1px solid #eee; border-radius: 6px; }
-    .q-ans { margin-top: 10px; color: #27ae60; font-weight: 600; font-size: 0.9rem; }
-
+    .class-banner-content h1 { margin: 0; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .virtual-btn { background-color: rgba(255, 255, 255, 0.9); color: #1a73e8; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    
     /* MODALS */
     .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; border-radius: 8px; width: 550px; padding: 0; box-shadow: 0 24px 38px rgba(0,0,0,0.14); }
-    .modal-content.large { width: 95%; max-width: 1100px; height: auto; }
     .modal-header { padding: 15px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 24px; }
-    .modal-footer { padding: 16px 24px; display: flex; justify-content: flex-end; gap: 10px; }
-    .input-group { margin-bottom: 20px; }
-    .input-group label { display: block; font-weight: 500; margin-bottom: 8px; color: #5f6368; }
-    .input-group input, textarea { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 4px; }
-    .upload-area-small { border: 2px dashed #dadce0; padding: 20px; text-align: center; background: #f8f9fa; cursor: pointer; color: #1a73e8; font-weight: 500; }
-    
-    .btn { padding: 8px 24px; border-radius: 4px; border: none; cursor: pointer; font-weight: 500; }
-    .btn-cancel { background: white; color: #5f6368; border: 1px solid #dadce0; }
-    .btn-go { background: #1a73e8; color: white; }
+    .input-group { margin-bottom: 15px; }
+    .input-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+    .input-group input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .modal-footer { padding: 15px 24px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; }
+    .btn-cancel { background: white; border: 1px solid #ddd; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+    .btn-go { background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 
-    /* JITSI CONTAINER */
-    #jitsi-container { width: 100%; height: 500px; background: #000; border-radius: 4px; overflow: hidden; }
+    /* Upload Area Style */
+    .upload-area-small { border: 2px dashed #dadce0; padding: 20px; text-align: center; background: #f8f9fa; cursor: pointer; color: #1a73e8; font-weight: 500; border-radius: 6px; transition: 0.2s; }
+    .upload-area-small:hover { background: #eef6fc; border-color: #1a73e8; }
+
+    /* DROP DOWN */
+    .dropdown-menu { display: none; position: absolute; top: 45px; right: 0; width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000; text-align: left; }
+    .dropdown-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #333; font-size: 14px; font-weight: 500; }
+    .dropdown-item:hover { background: #f5f5f5; }
+
+    /* Stream Items */
+    .stream-item { background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 20px; transition: 0.2s; }
+    .stream-item:hover { box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .item-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; flex-shrink: 0; }
+    .icon-assign { background: #e37400; }
+    .icon-quiz { background: #1a73e8; }
 
     #detailView { display: none; }
-    .back-btn { background: none; border: none; cursor: pointer; font-size: 1rem; color: #5f6368; margin-bottom: 20px; display: flex; align-items: center; gap: 5px; }
 </style>
 </head>
 <body>
 
     <header>
-        <div class="logo-section"><i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span></div>
+        <div class="logo-section" onclick="window.location.href='Dashboard.php'">
+            <i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span>
+        </div>
         <nav class="nav-links">
-            <a href="dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
-            <a href="#" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
-            <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
+            <a href="Dashboard.php" class="nav-item">Dashboard</a>
+            <a href="Classwork.php" class="nav-item active">Classes</a>
+            <a href="gradebook.php" class="nav-item">Gradebook</a>
         </nav>
         <div class="profile-section"><div class="avatar"></div></div>
     </header>
 
     <div class="app-layout">
         <aside class="sidebar">
-            <div class="sidebar-item" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
-            <div class="sidebar-item active" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
-            <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
-            <div class="sidebar-item" id="tab-marks" onclick="switchTab('marks')"><i class="fa-solid fa-chart-simple"></i> Marks</div>
+            <div id="sidebar-all-classes">
+                <div class="sidebar-item active"><i class="fa-solid fa-list"></i> All Classes</div>
+            </div>
+            
+            <div id="sidebar-single-class" style="display:none;">
+                <div class="sidebar-item" onclick="showAllClasses()"><i class="fa-solid fa-arrow-left"></i> Back to All</div>
+                <div class="sidebar-item active" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
+                <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
+                <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
+            </div>
         </aside>
 
         <main class="main-content">
-            <div id="streamSection" class="section-view">
-                <div class="class-banner">
-                    <div class="class-banner-content">
-                        <div><h1>BSIT 4-1 Programming</h1><p>Advanced Web Development</p></div>
-                        <button onclick="startMeeting()" class="virtual-btn"><i class="fa-solid fa-video"></i> Virtual Class</button>
-                    </div>
+            
+            <div id="view-all-classes" class="section-view active-section">
+                <div class="action-header">
+                    <h2>My Classes</h2>
+                    <button class="create-btn" onclick="openClassModal()">
+                        <i class="fa-solid fa-plus"></i> Create Class
+                    </button>
                 </div>
-                <div id="streamFeedArea">
-                    <div style="text-align:center; color:#777; margin-top:30px;">Loading stream...</div>
-                </div>
+                <div id="loadingMsg" style="text-align:center; padding:40px; color:#777;">Loading classes...</div>
+                <div class="class-grid" id="classGrid"></div>
             </div>
 
-            <div id="classworkSection" class="section-view active-section">
-                <div class="create-wrapper">
-                    <button class="create-btn" onclick="toggleDropdown()"><i class="fa-solid fa-plus"></i> Create</button>
-                    <div id="createDropdown" class="dropdown-menu">
-                        <div class="dropdown-item" onclick="openModal('assignModal')"><i class="fa-solid fa-file-pen"></i> Assignment</div>
-                        <div class="dropdown-item" onclick="openModal('aiModal')"><i class="fa-solid fa-robot"></i> AI Quiz Generator</div>
-                        <div class="dropdown-item" onclick="openModal('questModal')"><i class="fa-solid fa-question"></i> Question</div>
+            <div id="view-single-class" class="section-view">
+                
+                <div id="streamSection" class="active-tab-content">
+                    <div class="class-banner">
+                        <div class="class-banner-content">
+                            <div>
+                                <h1 id="bannerTitle">Loading...</h1>
+                                <p id="bannerSubtitle">...</p>
+                            </div>
+                            <button class="virtual-btn"><i class="fa-solid fa-video"></i> Virtual Class</button>
+                        </div>
                     </div>
+                    <div id="streamFeedArea" style="margin-top:30px;">Loading stream...</div>
                 </div>
 
-                <div id="streamView">
-                    <div id="loadingState" style="text-align:center; margin-top:50px; color:#666;">Loading classwork...</div>
-                    <div id="streamItemsArea"></div>
-                </div>
-
-                <div id="detailView">
-                    <button class="back-btn" onclick="closeDetail()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-                    <div style="background:white; border:1px solid #e0e0e0; border-radius:8px; padding:30px;">
-                        <h1 id="detTitle" style="margin:0 0 10px 0; color:#1a73e8;"></h1>
-                        <div id="detMeta" style="color:#666; margin-bottom:20px;"></div>
-                        <div id="detBody"></div>
+                <div id="classworkSection" class="active-tab-content" style="display:none;">
+                    
+                    <div id="streamListView">
+                        <div class="action-header">
+                            <h2>Classwork</h2>
+                            <div style="position: relative;">
+                                <button class="create-btn" onclick="toggleDropdown()">
+                                    <i class="fa-solid fa-plus"></i> Create
+                                </button>
+                                <div id="createDropdown" class="dropdown-menu">
+                                    <div class="dropdown-item" onclick="openAssignModal()"><i class="fa-solid fa-file-pen"></i> Assignment</div>
+                                    <div class="dropdown-item" onclick="openAiModal()"><i class="fa-solid fa-robot"></i> AI Quiz Generator</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="streamItemsArea"></div>
                     </div>
-                </div>
-            </div>
 
-            <div id="peopleSection" class="section-view">
-                <h2>People</h2>
-                <p>Teacher: Prof. Gandionco</p>
-                <p>Students list coming soon...</p>
-            </div>
-            <div id="marksSection" class="section-view">
-                <h2>Marks</h2>
-                <p>Gradebook data loading...</p>
+                    <div id="detailView">
+                        <button style="background:none; border:none; cursor:pointer; color:#1a73e8; margin-bottom:15px; font-size:16px; display:flex; align-items:center; gap:5px;" onclick="closeDetail()">
+                            <i class="fa-solid fa-arrow-left"></i> Back to list
+                        </button>
+                        <div style="background:white; padding:30px; border-radius:8px; border:1px solid #ddd;">
+                            <h2 id="detTitle" style="margin-top:0; color:#1a73e8;"></h2>
+                            <div id="detBody"></div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
         </main>
     </div>
 
-    <div id="jitsiModal" class="modal-overlay">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-video"></i> Virtual Class</h2>
-                <span style="cursor:pointer;" onclick="closeMeeting()">&times;</span>
+    <div id="createClassModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Create New Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
+            <div class="modal-body">
+                <div class="input-group"><label>Class Name</label><input type="text" id="newClassName"></div>
+                <div class="input-group"><label>Section</label><input type="text" id="newClassSection"></div>
             </div>
-            <div class="modal-body" style="padding: 10px;">
-                <div id="jitsi-container"></div>
-            </div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createClass()">Create</button></div>
         </div>
     </div>
 
     <div id="assignModal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header"><h2>Assignment</h2><span onclick="closeAllModals()" style="cursor:pointer">&times;</span></div>
+            <div class="modal-header"><h2>New Assignment</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
             <div class="modal-body">
                 <div class="input-group"><label>Title</label><input type="text" id="asTitle"></div>
                 <div class="input-group"><label>Instructions</label><textarea id="asInstr"></textarea></div>
-                <div class="upload-area-small" onclick="document.getElementById('asFile').click()">
-                    <input type="file" id="asFile" hidden onchange="showFile(this, 'asFileTxt')">
-                    <span id="asFileTxt"><i class="fa-solid fa-paperclip"></i> Attach File</span>
-                </div>
+                <div class="input-group"><label>Due Date</label><input type="datetime-local" id="asDueDate"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn btn-go" onclick="createAssign()">Assign</button></div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createAssign()">Assign</button></div>
         </div>
     </div>
 
     <div id="aiModal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header"><h2>Generate Quiz</h2><span onclick="closeAllModals()" style="cursor:pointer">&times;</span></div>
+            <div class="modal-header"><h2>Generate Quiz</h2><span style="cursor:pointer" onclick="closeAllModals()">&times;</span></div>
             <div class="modal-body">
                 <div class="upload-area-small" onclick="document.getElementById('aiFile').click()">
                     <input type="file" id="aiFile" hidden accept="application/pdf" onchange="showFile(this, 'aiFileTxt')">
                     <span id="aiFileTxt"><i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF</span>
                 </div>
+                
                 <div class="input-group" style="margin-top:20px;">
                     <label>Instructions for AI</label>
                     <textarea id="aiPrompt" placeholder="e.g. Generate 5 difficult questions about Chapter 3..."></textarea>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button></div>
-        </div>
-    </div>
-
-    <div id="questModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h2>Question</h2><span onclick="closeAllModals()" style="cursor:pointer">&times;</span></div>
-            <div class="modal-body">
-                <div class="input-group"><label>Question</label><textarea id="qText"></textarea></div>
-            </div>
-            <div class="modal-footer"><button class="btn btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn btn-go" onclick="createQuest()">Ask</button></div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button></div>
         </div>
     </div>
 
 <script>
-    // --- SETUP GLOBALS ---
-    let jitsiApi = null;
-    console.log("Script initializing...");
-
-    window.switchTab = function(tabName) {
-        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-        const tab = document.getElementById('tab-' + tabName);
-        if(tab) tab.classList.add('active');
-        
-        document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active-section'));
-        const section = document.getElementById(tabName + 'Section');
-        if(section) section.classList.add('active-section');
-    };
-
-    window.toggleDropdown = function() { 
-        const el = document.getElementById('createDropdown'); 
-        el.style.display = (el.style.display === 'block') ? 'none' : 'block'; 
-    };
-
-    window.onclick = function(e) { 
-        if (!e.target.matches('.create-btn') && !e.target.closest('.create-btn')) {
-            const dropdown = document.getElementById('createDropdown');
-            if(dropdown) dropdown.style.display = 'none'; 
-        }
-        if (e.target.classList.contains('modal-overlay')) {
-            if(e.target.id === 'jitsiModal') window.closeMeeting();
-            else window.closeAllModals(); 
-        }
-    };
-
-    window.openModal = function(id) { 
-        const dropdown = document.getElementById('createDropdown');
-        if(dropdown) dropdown.style.display = 'none'; 
-        document.getElementById(id).style.display = 'flex'; 
-    };
-
-    window.closeAllModals = function() { 
-        document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none'); 
-    };
-
-    window.showFile = function(input, txtId) { 
-        if(input.files[0]) { 
-            document.getElementById(txtId).innerHTML = `<b>${input.files[0].name}</b>`; 
-            document.getElementById(txtId).style.color = '#1a73e8'; 
-        } 
-    };
-
-    // --- JITSI FUNCTIONS ---
-    window.startMeeting = function() {
-        document.getElementById('jitsiModal').style.display = 'flex';
-        // Use meet.ffmuc.net to avoid 5min limits
-        const domain = "meet.ffmuc.net"; 
-        const options = {
-            roomName: "TechHub_BSIT41_Programming_Room_2026",
-            width: "100%", 
-            height: 500,
-            parentNode: document.querySelector('#jitsi-container'),
-            userInfo: { displayName: 'Prof. Jhomari Gandionco' },
-            configOverwrite: {
-                prejoinPageEnabled: false,
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                disableDeepLinking: true
-            }
-        };
-        document.querySelector('#jitsi-container').innerHTML = "";
-        jitsiApi = new JitsiMeetExternalAPI(domain, options);
-    };
-
-    window.closeMeeting = function() {
-        if (jitsiApi) {
-            jitsiApi.executeCommand('hangup');
-            jitsiApi.dispose();
-            jitsiApi = null;
-        }
-        document.getElementById('jitsiModal').style.display = 'none';
-        document.querySelector('#jitsi-container').innerHTML = "";
-    };
-
-    // --- SUPABASE CONFIGURATION ---
+    // --- SETUP ---
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0'; 
-    
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
     let supabaseClient;
-    let currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" };
-    let classworkItems = [];
+    const currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" };
+    let currentClassId = null;
 
-    // Initialize Supabase
-    try {
-        if (!window.supabase) {
-            throw new Error("Supabase CDN failed to load.");
-        }
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        console.log("Supabase connected.");
-    } catch (err) {
-        console.error("Supabase Init Error:", err);
-        alert("System Error: Could not connect to database.");
-    }
+    try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
+    catch (e) { console.error(e); }
 
-    // --- INITIAL LOAD ---
     document.addEventListener('DOMContentLoaded', () => {
-        if(supabaseClient) {
-            fetchClasswork();
-        } else {
-            document.getElementById('loadingState').innerText = "Error: Database not connected.";
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const cid = urlParams.get('class_id');
+        if (cid) openClass(cid); 
+        else fetchClasses(); 
     });
 
-    async function fetchClasswork() {
-        console.log("Fetching classwork...");
-        const loading = document.getElementById('loadingState');
-        if(loading) loading.style.display = 'block';
-        
-        try {
-            const { data, error } = await supabaseClient
-                .from('classwork')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            classworkItems = data || [];
-            renderClassworkList();
-            renderStreamFeed();
-            
-            if(loading) loading.style.display = 'none';
-
-        } catch (err) {
-            console.error("Fetch Error:", err);
-            if(loading) loading.innerText = "Failed to load classwork. See console.";
-        }
+    // --- HELPER ---
+    function showFile(input, txtId) { 
+        if(input.files[0]) { 
+            document.getElementById(txtId).innerHTML = `<i class="fa-solid fa-file-pdf"></i> <b>${input.files[0].name}</b>`; 
+            document.getElementById(txtId).style.color = '#333'; 
+        } 
     }
 
-    // --- DB ACTIONS ---
-    window.createAssign = async function() {
-        const title = document.getElementById('asTitle').value;
-        const instr = document.getElementById('asInstr').value;
-        const fileInput = document.getElementById('asFile');
-        const btn = document.querySelector('#assignModal .btn-go');
-
-        if(!title) return alert("Title required");
-        btn.innerText = "Saving..."; btn.disabled = true;
-
-        try {
-            let fileUrl = null;
-            let fileName = null;
-
-            if (fileInput.files[0]) {
-                const file = fileInput.files[0];
-                fileName = file.name;
-                const filePath = `${currentUser.id}/${Date.now()}_${file.name}`;
-                const { error: uploadError } = await supabaseClient.storage.from('materials').upload(filePath, file);
-                if(uploadError) throw uploadError;
-                const { data: publicData } = supabaseClient.storage.from('materials').getPublicUrl(filePath);
-                fileUrl = publicData.publicUrl;
-            }
-
-            const { error } = await supabaseClient.from('classwork').insert([{
-                teacher_id: currentUser.id,
-                type: 'assignment',
-                title: title,
-                description: instr,
-                file_name: fileName,
-                file_url: fileUrl
-            }]);
-
-            if(error) throw error;
-            window.closeAllModals();
-            fetchClasswork(); 
-
-        } catch(err) {
-            alert("Error: " + err.message);
-        } finally {
-            btn.innerText = "Assign"; btn.disabled = false;
-        }
-    };
-
-    window.generateQuiz = async function() {
-        const file = document.getElementById('aiFile').files[0];
-        const prompt = document.getElementById('aiPrompt').value;
-        const btn = document.getElementById('aiBtn');
-
-        if (!file) return alert("Please upload a PDF.");
-        btn.innerText = "Generating..."; btn.disabled = true;
-
-        try {
-            const formData = new FormData();
-            formData.append('pdf_file', file);
-            formData.append('custom_prompt', prompt);
-
-            const res = await fetch('api/generate_quiz_api.php', { method: 'POST', body: formData });
-            const textResponse = await res.text();
-            let aiResult = JSON.parse(textResponse);
-            if (!aiResult.success) throw new Error(aiResult.message);
-
-            const filePath = `${currentUser.id}/${Date.now()}_${file.name}`;
-            await supabaseClient.storage.from('materials').upload(filePath, file);
-            const { data: publicData } = supabaseClient.storage.from('materials').getPublicUrl(filePath);
-
-            const { error } = await supabaseClient.from('classwork').insert([{
-                teacher_id: currentUser.id,
-                type: 'quiz',
-                title: 'Quiz: ' + file.name,
-                description: 'AI Generated Quiz',
-                file_name: file.name,
-                file_url: publicData.publicUrl,
-                quiz_data: aiResult.questions 
-            }]);
-
-            if(error) throw error;
-            window.closeAllModals();
-            fetchClasswork();
-
-        } catch (err) {
-            console.error(err);
-            alert("Error: " + err.message);
-        } finally {
-            btn.innerText = "Generate"; btn.disabled = false;
-        }
-    };
-
-    window.createQuest = async function() {
-        const qText = document.getElementById('qText').value;
-        if(!qText) return alert("Question required");
-        const btn = document.querySelector('#questModal .btn-go');
-        btn.disabled = true;
-
-        try {
-            const { error } = await supabaseClient.from('classwork').insert([{
-                teacher_id: currentUser.id,
-                type: 'question',
-                title: qText,
-                description: qText
-            }]);
-            if(error) throw error;
-            window.closeAllModals();
-            fetchClasswork();
-        } catch(err) {
-            alert("Error: " + err.message);
-        } finally {
-            btn.disabled = false;
-        }
-    };
-
-    // --- RENDER LOGIC ---
-    function renderClassworkList() {
-        const list = document.getElementById('streamItemsArea');
-        if(!list) return;
-        list.innerHTML = '';
+    // --- VIEW SWITCHING ---
+    function showAllClasses() {
+        document.getElementById('view-all-classes').style.display = 'block';
+        document.getElementById('view-single-class').style.display = 'none';
+        document.getElementById('sidebar-all-classes').style.display = 'block';
+        document.getElementById('sidebar-single-class').style.display = 'none';
         
-        if(classworkItems.length === 0) {
-            list.innerHTML = '<div style="text-align:center; margin-top:50px; color:#999;">No classwork yet. Click Create!</div>';
+        const url = new URL(window.location);
+        url.searchParams.delete('class_id');
+        window.history.pushState({}, '', url);
+        fetchClasses();
+    }
+
+    async function openClass(classId) {
+        currentClassId = classId;
+        const url = new URL(window.location);
+        url.searchParams.set('class_id', classId);
+        window.history.pushState({}, '', url);
+
+        document.getElementById('view-all-classes').style.display = 'none';
+        document.getElementById('view-single-class').style.display = 'block';
+        document.getElementById('sidebar-all-classes').style.display = 'none';
+        document.getElementById('sidebar-single-class').style.display = 'block';
+
+        const { data: cls } = await supabaseClient.from('classes').select('*').eq('id', classId).single();
+        if(cls) {
+            document.getElementById('bannerTitle').innerText = cls.title;
+            document.getElementById('bannerSubtitle').innerText = cls.section;
+        }
+        fetchClasswork();
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+        document.getElementById('tab-'+tab).classList.add('active');
+        
+        document.querySelectorAll('.active-tab-content').forEach(e => e.style.display = 'none');
+        if(tab === 'stream') document.getElementById('streamSection').style.display = 'block';
+        if(tab === 'classwork') document.getElementById('classworkSection').style.display = 'block';
+    }
+
+    // --- DATA FETCHING ---
+    async function fetchClasses() {
+        const grid = document.getElementById('classGrid');
+        const loader = document.getElementById('loadingMsg');
+        
+        const { data } = await supabaseClient.from('classes')
+            .select('*').eq('teacher_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        loader.style.display = 'none';
+        grid.innerHTML = '';
+
+        if(!data || data.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">No classes found. Create one!</div>';
             return;
         }
 
-        classworkItems.forEach((item, index) => {
+        const imgs = [
+            "https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&w=800&q=80",
+            "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&w=800&q=80",
+            "https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-4.0.3&w=800&q=80"
+        ];
+
+        data.forEach((cls, idx) => {
+            const card = document.createElement('div');
+            card.className = 'class-card';
+            card.onclick = () => openClass(cls.id);
+            
+            card.innerHTML = `
+                <div class="class-image"><img src="${imgs[idx % imgs.length]}"></div>
+                <div class="class-text-content">
+                    <div class="class-title">${cls.title}</div>
+                    <div class="class-subtitle">${cls.section}</div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // --- FETCH CLASSWORK (Updated to use Elements) ---
+    async function fetchClasswork() {
+        const { data } = await supabaseClient.from('classwork')
+            .select('*').eq('class_id', currentClassId)
+            .order('created_at', { ascending: false });
+            
+        const list = document.getElementById('streamFeedArea');
+        const items = document.getElementById('streamItemsArea');
+        
+        list.innerHTML = '';
+        items.innerHTML = '';
+        
+        if(!data || data.length === 0) {
+            const msg = '<div style="text-align:center; color:#999; padding:20px;">No content yet.</div>';
+            list.innerHTML = msg;
+            items.innerHTML = msg;
+            return;
+        }
+        
+        // Loop and Create Elements
+        data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'stream-item';
-            div.onclick = () => window.showDetail(index);
-            
-            let icon = 'fa-file-text';
+            div.onclick = () => showDetail(item); // CLICK HANDLER ADDED
+
+            let icon = 'fa-file-lines';
             let color = 'icon-assign';
             if(item.type === 'quiz') { icon = 'fa-robot'; color = 'icon-quiz'; }
-            if(item.type === 'question') { icon = 'fa-question'; color = 'icon-quest'; }
-
+            
             div.innerHTML = `
                 <div class="item-icon ${color}"><i class="fa-solid ${icon}"></i></div>
                 <div class="item-content">
                     <div class="item-title">${item.title}</div>
-                    <div class="item-meta">${new Date(item.created_at).toLocaleDateString()} • ${item.file_name ? 'Attachment' : 'No attachment'}</div>
+                    <div class="item-meta">Posted ${new Date(item.created_at).toLocaleDateString()}</div>
                 </div>
             `;
-            list.appendChild(div);
+            
+            // Clone for the second list
+            const divClone = div.cloneNode(true);
+            divClone.onclick = () => {
+                switchTab('classwork'); // If clicked from stream, switch tab
+                showDetail(item);
+            };
+
+            items.appendChild(div);
+            list.appendChild(divClone);
         });
     }
 
-    function renderStreamFeed() {
-        const feed = document.getElementById('streamFeedArea');
-        if(!feed) return;
-        feed.innerHTML = '';
-
-        if(classworkItems.length === 0) {
-            feed.innerHTML = `<div style="text-align:center; color:#5f6368; padding:20px;">No updates yet.</div>`;
-            return;
+    // --- SHOW DETAIL (The Logic You Were Missing) ---
+    function showDetail(item) {
+        document.getElementById('streamListView').style.display = 'none';
+        document.getElementById('detailView').style.display = 'block';
+        document.getElementById('detTitle').innerText = item.title;
+        
+        let content = `<p style="font-size:1.1rem; color:#555;">${item.description || ''}</p>`;
+        
+        // Show Due Date
+        if (item.due_date) {
+            content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p>`;
         }
 
-        // Show simplified version for Stream
-        classworkItems.forEach((item, index) => {
-            const div = document.createElement('div');
-            div.className = 'stream-item';
-            div.style.border = "1px solid #e0e0e0";
-            
-            // Clicking stream item takes you to Classwork detail
-            div.onclick = () => {
-                window.switchTab('classwork');
-                window.showDetail(index);
-            };
-            
-            let icon = 'fa-clipboard-list';
-            let color = 'icon-assign';
-            if(item.type === 'quiz') { icon = 'fa-robot'; color = 'icon-quiz'; }
-
-            div.innerHTML = `
-                <div class="item-icon ${color}"><i class="fa-solid ${icon}"></i></div>
-                <div class="item-content">
-                    <div class="item-title">Prof. Gandionco posted a new ${item.type}: ${item.title}</div>
-                    <div class="item-meta">${new Date(item.created_at).toDateString()}</div>
-                </div>
-            `;
-            feed.appendChild(div);
-        });
-    }
-
-    window.showDetail = function(index) {
-        const item = classworkItems[index];
-        document.getElementById('streamView').style.display = 'none';
-        document.querySelector('.create-wrapper').style.display = 'none';
-        document.getElementById('detailView').style.display = 'block';
-
-        document.getElementById('detTitle').innerText = item.title;
-        document.getElementById('detMeta').innerText = `Type: ${item.type.toUpperCase()}`;
-
-        const body = document.getElementById('detBody');
-        body.innerHTML = '';
-
+        // Show AI Quiz Questions
         if(item.type === 'quiz' && item.quiz_data) {
-            item.quiz_data.forEach((q, i) => {
-                body.innerHTML += `
-                    <div class="quiz-question-card">
-                        <div class="q-title">${i+1}. ${q.question}</div>
-                        <div class="q-options-grid">
-                            ${q.options.map(opt => `<div class="q-opt">${opt}</div>`).join('')}
-                        </div>
-                        <div class="q-ans"><i class="fa-solid fa-check"></i> Answer: ${q.answer}</div>
-                    </div>
-                `;
-            });
-        } else {
-            body.innerHTML = `<p style="font-size:1.1rem; line-height:1.6;">${item.description || ''}</p>`;
-            if(item.file_url) {
-                body.innerHTML += `
-                    <div style="margin-top:20px; padding:15px; border:1px solid #ddd; border-radius:6px; display:inline-flex; align-items:center; gap:10px;">
-                        <i class="fa-solid fa-paperclip" style="color:#1a73e8"></i>
-                        <a href="${item.file_url}" target="_blank" style="text-decoration:none; color:#333; font-weight:500;">${item.file_name}</a>
-                    </div>
-                `;
+            let questions = item.quiz_data;
+            // Parse if string
+            if (typeof questions === 'string') {
+                try { questions = JSON.parse(questions); } catch(e) {}
+            }
+
+            if (Array.isArray(questions)) {
+                content += `<div style="margin-top:20px;">`;
+                questions.forEach((q, i) => {
+                    // Create options
+                    let opts = '';
+                    if(Array.isArray(q.options)) {
+                        opts = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                            ${q.options.map(o => `<div style="background:#f8f9fa; padding:10px; border:1px solid #ddd; border-radius:4px;">${o}</div>`).join('')}
+                        </div>`;
+                    }
+
+                    content += `
+                        <div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;">
+                            <div style="font-weight:600; font-size:16px;">${i+1}. ${q.question}</div>
+                            ${opts}
+                            <div style="margin-top:10px; color:#137333; font-weight:500;">Answer: ${q.answer}</div>
+                        </div>`;
+                });
+                content += `</div>`;
             }
         }
-    };
+        
+        document.getElementById('detBody').innerHTML = content;
+    }
 
-    window.closeDetail = function() {
+    function closeDetail() {
         document.getElementById('detailView').style.display = 'none';
-        document.getElementById('streamView').style.display = 'block';
-        document.querySelector('.create-wrapper').style.display = 'block';
+        document.getElementById('streamListView').style.display = 'block';
+    }
+
+    // --- ACTIONS ---
+    async function createClass() {
+        const title = document.getElementById('newClassName').value;
+        const section = document.getElementById('newClassSection').value;
+        if(!title) return alert("Required");
+        
+        await supabaseClient.from('classes').insert([{ teacher_id: currentUser.id, title, section }]);
+        closeAllModals();
+        fetchClasses();
+    }
+
+    async function createAssign() {
+        const title = document.getElementById('asTitle').value;
+        const desc = document.getElementById('asInstr').value;
+        const due = document.getElementById('asDueDate').value;
+        
+        if(!title) return alert("Required");
+        
+        await supabaseClient.from('classwork').insert([{
+            teacher_id: currentUser.id,
+            class_id: currentClassId,
+            type: 'assignment',
+            title, description: desc,
+            due_date: due ? new Date(due).toISOString() : null
+        }]);
+        
+        closeAllModals();
+        fetchClasswork();
+    }
+
+    async function generateQuiz() {
+        const file = document.getElementById('aiFile').files[0];
+        const prompt = document.getElementById('aiPrompt').value;
+        const btn = document.getElementById('aiBtn');
+        if(!file) return alert("Upload PDF");
+        
+        btn.innerText = "Generating..."; btn.disabled = true;
+        try {
+            const fd = new FormData();
+            fd.append('pdf_file', file);
+            fd.append('custom_prompt', prompt);
+            const res = await fetch('api/generate_quiz_api.php', { method:'POST', body:fd });
+            const result = await res.json();
+            
+            if(result.success) {
+                await supabaseClient.from('classwork').insert([{
+                    teacher_id: currentUser.id,
+                    class_id: currentClassId,
+                    type: 'quiz',
+                    title: 'Quiz: ' + file.name,
+                    description: 'AI Generated',
+                    file_name: file.name,
+                    quiz_data: result.questions
+                }]);
+                closeAllModals();
+                fetchClasswork();
+            } else { alert(result.message); }
+        } catch(e) { alert("Error generating quiz"); }
+        finally { btn.innerText = "Generate"; btn.disabled = false; }
+    }
+
+    // --- MODALS ---
+    function toggleDropdown() { 
+        const d = document.getElementById('createDropdown');
+        d.style.display = (d.style.display === 'block') ? 'none' : 'block';
+    }
+    function openClassModal() { document.getElementById('createClassModal').style.display = 'flex'; }
+    function openAssignModal() { 
+        document.getElementById('createDropdown').style.display='none';
+        document.getElementById('assignModal').style.display = 'flex'; 
+    }
+    function openAiModal() {
+        document.getElementById('createDropdown').style.display='none';
+        document.getElementById('aiModal').style.display = 'flex';
+    }
+    function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
+    
+    window.onclick = function(e) {
+        if(e.target.classList.contains('modal-overlay')) closeAllModals();
+        if (!e.target.matches('.create-btn') && !e.target.closest('.create-btn')) {
+            const dropdown = document.getElementById('createDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
     };
 </script>
 </body>
