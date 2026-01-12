@@ -133,7 +133,7 @@
                     <i class="fa-solid fa-gear"></i> Settings
                 </div>
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
-                <div class="dropdown-item logout-item" onclick="window.location.href='logout.php'">
+                <div class="dropdown-item logout-item" onclick="window.location.href='teacher_login.php'">
                     <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </div>
             </div>
