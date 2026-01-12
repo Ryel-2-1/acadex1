@@ -310,7 +310,7 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0'; 
     
     let supabaseClient;
-    let currentUser = { id: "test-teacher-123" };
+    let currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" };
     let classworkItems = [];
 
     // Initialize Supabase
