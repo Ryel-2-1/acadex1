@@ -21,7 +21,25 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
     /* --- GENERAL RESET & STYLES --- */
     body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; height: 100vh; display: flex; flex-direction: column; }
     * { box-sizing: border-box; }
+/* Add this to your style section if not already present */
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+    color: #5f6368;
+}
 
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Specific red hover for logout */
+.dropdown-item[onclick*="logout"]:hover {
+    background-color: #fce8e6;
+    color: #d93025;
+}
+.dropdown-item[onclick*="logout"]:hover i {
+    color: #d93025;
+}
     /* --- HEADER --- */
     header { background: white; padding: 0 40px; height: 70px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; z-index: 100; }
     .logo-section { display: flex; align-items: center; gap: 10px; width: 250px; }
@@ -30,7 +48,26 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
     .nav-links { display: flex; gap: 30px; height: 100%; }
     .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #5f6368; font-weight: 500; height: 100%; cursor: pointer; }
     .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
-    .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
+    /* Updated Profile Styles to match Dashboard */
+        .profile-section { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            text-align: right; 
+            width: 250px; 
+            justify-content: flex-end; 
+        }
+        .profile-info h4 { 
+            margin: 0; 
+            font-size: 15px; 
+            font-weight: 600; 
+            color: #333; 
+        }
+        .profile-info span { 
+            font-size: 13px; 
+            color: #777; 
+            display: block; 
+        }
     .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
 
     /* --- LAYOUT --- */
@@ -103,14 +140,36 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
 </head>
 <body>
 
-    <header>
-        <div class="logo-section"><i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span></div>
+   <header>
+        <div class="logo-section">
+            <i class="fa-solid fa-book-open logo-icon"></i>
+            <span class="logo-text">TechHub</span>
+        </div>
         <nav class="nav-links">
             <a href="dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
-            <a href="#" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
+            <a href="Classwork.php" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
             <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
         </nav>
-        <div class="profile-section"><div class="avatar"></div></div>
+        <div class="profile-section" style="position: relative;">
+    <div class="profile-info" onclick="toggleProfileDropdown()" style="cursor: pointer;">
+        <h4>Prof. Jhomari Gandionco</h4>
+        <span>Teacher <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i></span>
+    </div>
+    <div class="avatar" onclick="toggleProfileDropdown()" style="cursor: pointer;"></div>
+    
+    <div id="profileDropdown" class="dropdown-menu" style="right: 0; left: auto; top: 60px; width: 180px;">
+        <div class="dropdown-item" onclick="window.location.href='profile.php'">
+            <i class="fa-solid fa-user"></i> My Profile
+        </div>
+        <div class="dropdown-item" onclick="window.location.href='settings.php'">
+            <i class="fa-solid fa-gear"></i> Settings
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+        <div class="dropdown-item" onclick="window.location.href='teacher_login.php'" style="color: #d93025;">
+            <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </div>
+    </div>
+</div>
     </header>
 
     <div class="app-layout">
@@ -581,6 +640,35 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
         document.getElementById('streamView').style.display = 'block';
         document.querySelector('.create-wrapper').style.display = 'block';
     };
+    window.toggleProfileDropdown = function() {
+    const profileMenu = document.getElementById('profileDropdown');
+    // Close create dropdown if it's open
+    const createMenu = document.getElementById('createDropdown');
+    if(createMenu) createMenu.style.display = 'none';
+    
+    profileMenu.style.display = (profileMenu.style.display === 'block') ? 'none' : 'block';
+}
+
+// Update your existing window.onclick to handle closing the profile dropdown too
+window.onclick = function(e) { 
+    // Close Create Dropdown
+    if (!e.target.closest('.create-btn')) {
+        const createDropdown = document.getElementById('createDropdown');
+        if(createDropdown) createDropdown.style.display = 'none'; 
+    }
+    
+    // Close Profile Dropdown
+    if (!e.target.closest('.profile-section')) {
+        const profileDropdown = document.getElementById('profileDropdown');
+        if(profileDropdown) profileDropdown.style.display = 'none';
+    }
+
+    // Modal closing logic (keep your existing code)
+    if (e.target.classList.contains('modal-overlay')) {
+        if(e.target.id === 'jitsiModal') window.closeMeeting();
+        else window.closeAllModals(); 
+    }
+};
 </script>
 </body>
 </html>

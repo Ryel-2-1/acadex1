@@ -11,7 +11,7 @@
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; }
         * { box-sizing: border-box; }
 
-        /* --- HEADER STYLES (Identical to Dashboard) --- */
+        /* --- HEADER STYLES --- */
         header {
             background-color: white;
             padding: 0 40px;
@@ -45,7 +45,7 @@
             width: 100%; height: 3px; background-color: #1a73e8;
         }
 
-        .profile-section { display: flex; align-items: center; gap: 12px; text-align: right; width: 250px; justify-content: flex-end; }
+        .profile-section { display: flex; align-items: center; gap: 12px; text-align: right; width: 250px; justify-content: flex-end; position: relative; }
         .profile-info h4 { margin: 0; font-size: 15px; font-weight: 600; color: #333; }
         .profile-info span { font-size: 13px; color: #777; display: block; }
         .avatar {
@@ -55,153 +55,53 @@
             background-size: cover;
         }
 
+        /* --- DROPDOWN STYLES --- */
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; right: 0;
+            background: white; width: 200px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000;
+        }
+        .dropdown-item {
+            padding: 12px 20px; display: flex; align-items: center; gap: 15px;
+            color: #444; cursor: pointer; transition: background 0.1s; text-align: left;
+        }
+        .dropdown-item:hover { background-color: #f5f5f5; }
+        .dropdown-item i { width: 20px; text-align: center; color: #5f6368; }
+        
+        /* Logout specific hover */
+        .dropdown-item.logout-item:hover { background-color: #fce8e6; color: #d93025; }
+        .dropdown-item.logout-item:hover i { color: #d93025; }
+
         /* --- GRADEBOOK SPECIFIC STYLES --- */
         main { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
 
-        /* Toolbar */
         .gb-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; background: white; padding: 15px 20px;
+            border-radius: 8px; border: 1px solid #e0e0e0;
         }
-
         .filter-group { display: flex; gap: 15px; align-items: center; }
-        
-        select.gb-select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-family: inherit;
-            color: #444;
-            outline: none;
-        }
-
-        .search-box {
-            position: relative;
-        }
-        .search-box input {
-            padding: 8px 12px 8px 35px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            font-family: inherit;
-            outline: none;
-            width: 250px;
-        }
-        .search-box i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #999;
-            font-size: 14px;
-        }
-
-        .export-btn {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        select.gb-select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; color: #444; outline: none; }
+        .search-box { position: relative; }
+        .search-box input { padding: 8px 12px 8px 35px; border: 1px solid #ddd; border-radius: 20px; font-family: inherit; outline: none; width: 250px; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; }
+        .export-btn { background-color: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .export-btn:hover { background-color: #219150; }
 
-        /* Grade Table */
-        .table-container {
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-            overflow-x: auto; /* Allow side scroll if many columns */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 900px;
-        }
-
-        thead {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        th {
-            text-align: left;
-            padding: 15px 20px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #555;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 12px 20px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-            vertical-align: middle;
-        }
-
-        tr:last-child td { border-bottom: none; }
+        .table-container { background: white; border-radius: 8px; border: 1px solid #e0e0e0; overflow-x: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        thead { background-color: #f8f9fa; border-bottom: 2px solid #e0e0e0; }
+        th { text-align: left; padding: 15px 20px; font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; white-space: nowrap; }
+        td { padding: 12px 20px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; }
         tr:hover { background-color: #fcfcfc; }
-
-        /* Student Cell Style */
-        .student-cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .student-avatar {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background-color: #e0e0e0;
-            font-size: 12px;
-            display: flex; align-items: center; justify-content: center;
-            color: #666; font-weight: bold;
-        }
-
-        /* Input Grade Cell */
-        .grade-input {
-            width: 50px;
-            padding: 6px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            text-align: center;
-            font-family: inherit;
-            background: transparent;
-            transition: 0.2s;
-        }
-        .grade-input:hover, .grade-input:focus {
-            background: #fff;
-            border-color: #1a73e8;
-            outline: none;
-        }
-
-        /* Status Badges */
-        .badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
+        .student-cell { display: flex; align-items: center; gap: 12px; }
+        .student-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #e0e0e0; font-size: 12px; display: flex; align-items: center; justify-content: center; color: #666; font-weight: bold; }
+        .grade-input { width: 50px; padding: 6px; border: 1px solid transparent; border-radius: 4px; text-align: center; font-family: inherit; background: transparent; transition: 0.2s; }
+        .grade-input:hover, .grade-input:focus { background: #fff; border-color: #1a73e8; outline: none; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .pass { background-color: #e8f5e9; color: #27ae60; }
         .fail { background-color: #ffebee; color: #c0392b; }
-        
-        .average-cell {
-            font-weight: 700;
-            color: #1a73e8;
-        }
+        .average-cell { font-weight: 700; color: #1a73e8; }
     </style>
 </head>
 <body>
@@ -213,28 +113,34 @@
         </div>
 
         <nav class="nav-links">
-            <a href="dashboard.php" class="nav-item">
-                <i class="fa-solid fa-border-all"></i> Dashboard
-            </a>
-            <a href="classwork.php" class="nav-item">
-                <i class="fa-solid fa-book"></i> Classes
-            </a>
-            <a href="gradebook.php" class="nav-item active">
-                <i class="fa-solid fa-graduation-cap"></i> Gradebook
-            </a>
+            <a href="dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+            <a href="classwork.php" class="nav-item"><i class="fa-solid fa-book"></i> Classes</a>
+            <a href="gradebook.php" class="nav-item active"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
         </nav>
 
         <div class="profile-section">
-            <div class="profile-info">
+            <div class="profile-info" onclick="toggleProfileDropdown()" style="cursor: pointer;">
                 <h4>Prof. Jhomari Gandionco</h4>
-                <span>Teacher</span>
+                <span>Teacher <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i></span>
             </div>
-            <div class="avatar"></div>
+            <div class="avatar" onclick="toggleProfileDropdown()" style="cursor: pointer;"></div>
+            
+            <div id="profileDropdown" class="dropdown-menu">
+                <div class="dropdown-item" onclick="window.location.href='profile.php'">
+                    <i class="fa-solid fa-user"></i> My Profile
+                </div>
+                <div class="dropdown-item" onclick="window.location.href='settings.php'">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </div>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+                <div class="dropdown-item logout-item" onclick="window.location.href='logout.php'">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </div>
+            </div>
         </div>
     </header>
 
     <main>
-        
         <div class="gb-toolbar">
             <div class="filter-group">
                 <label style="font-weight:600; font-size:14px;">Class:</label>
@@ -286,79 +192,43 @@
                         <td class="average-cell">89%</td>
                         <td><span class="badge pass">Passed</span></td>
                     </tr>
-
-                    <tr>
-                        <td>
-                            <div class="student-cell">
-                                <div class="student-avatar" style="background:#fff3e0; color:#e67e22;">AS</div>
-                                <div>
-                                    <div style="font-weight:600;">Alice Smith</div>
-                                    <div style="font-size:12px; color:#888;">2023-00456</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td><input type="number" class="grade-input" value="70" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="30" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="75" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="80" onchange="calculateRow(this)"></td>
-                        <td class="average-cell">72%</td>
-                        <td><span class="badge fail">Failed</span></td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            <div class="student-cell">
-                                <div class="student-avatar" style="background:#e3f2fd; color:#1976D2;">RJ</div>
-                                <div>
-                                    <div style="font-weight:600;">Robert Johnson</div>
-                                    <div style="font-size:12px; color:#888;">2023-00789</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td><input type="number" class="grade-input" value="95" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="48" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="98" onchange="calculateRow(this)"></td>
-                        <td><input type="number" class="grade-input" value="95" onchange="calculateRow(this)"></td>
-                        <td class="average-cell">96%</td>
-                        <td><span class="badge pass">Passed</span></td>
-                    </tr>
                     </tbody>
             </table>
         </div>
-
     </main>
 
     <script>
-        // Simple search filter function
+        window.toggleProfileDropdown = function() {
+            const profileMenu = document.getElementById('profileDropdown');
+            profileMenu.style.display = (profileMenu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        window.onclick = function(e) { 
+            // Close Profile Dropdown if clicked outside
+            if (!e.target.closest('.profile-section')) {
+                const profileDropdown = document.getElementById('profileDropdown');
+                if(profileDropdown) profileDropdown.style.display = 'none';
+            }
+        }
+
         function filterTable() {
             const input = document.getElementById("studentSearch");
             const filter = input.value.toUpperCase();
             const table = document.getElementById("gradeTable");
             const tr = table.getElementsByTagName("tr");
 
-            for (let i = 1; i < tr.length; i++) { // Start at 1 to skip header
-                const td = tr[i].getElementsByTagName("td")[0]; // Check Name column
+            for (let i = 1; i < tr.length; i++) {
+                const td = tr[i].getElementsByTagName("td")[0];
                 if (td) {
                     const txtValue = td.textContent || td.innerText;
-                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                        tr[i].style.display = "";
-                    } else {
-                        tr[i].style.display = "none";
-                    }
+                    tr[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
                 }       
             }
         }
 
-        // Mock function to simulate grade calculation UI update
-        // In the real app, this would send an AJAX request to save to DB
         function calculateRow(input) {
-            // Visual feedback that data "saved"
             input.style.backgroundColor = "#e8f5e9";
-            setTimeout(() => {
-                input.style.backgroundColor = "transparent";
-            }, 500);
-            
-            // Note: Actual average calculation logic would go here
+            setTimeout(() => { input.style.backgroundColor = "transparent"; }, 500);
             console.log("Grade updated: " + input.value);
         }
     </script>
