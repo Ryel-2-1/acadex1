@@ -164,7 +164,7 @@ session_start();
             <div class="sidebar-item active"><i class="fa-solid fa-list"></i> All Classes</div>
         </div>
         <div id="sidebar-single-class" style="display:none;">
-            <div class="sidebar-item" onclick="showAllClasses()"><i class="fa-solid fa-arrow-left"></i> Back to All</div>
+            
             <div class="sidebar-item active" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
             <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
             <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
@@ -1156,7 +1156,7 @@ async function fetchAttendance() {
                 <td style="padding: 15px;">${timeInStr}</td>
                 <td style="padding: 15px;">${timeOutStr}</td>
                 <td style="padding: 15px; font-weight: bold;">${durationStr}</td>
-            </tr>
+            </tr> 
         `;
         tbody.insertAdjacentHTML('beforeend', row);
     });
