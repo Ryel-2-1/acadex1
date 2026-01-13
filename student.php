@@ -11,16 +11,30 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #ffffff; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
+        /* Virtual Class Button Styling */
+        .btn-virtual-class {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            width: 100%; margin-top: 15px; padding: 10px;
+            background-color: #f0fff4; color: #00C060;
+            border: 1px solid #00C060; border-radius: 4px;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            transition: 0.2s; animation: pulse-green 2s infinite;
+        }
+        .btn-virtual-class:hover { background-color: #00C060; color: white; }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 192, 96, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 192, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 192, 96, 0); }
+        }
+
         /* --- HEADER --- */
         header { height: 65px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e0e0; background: white; position: fixed; top: 0; width: 100%; z-index: 1000; }
         .logo-area { display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .logo-icon { font-size: 28px; color: #00C060; } 
         .logo-text { font-size: 22px; font-weight: 600; color: #202124; }
-        
         .header-right { display: flex; align-items: center; gap: 20px; }
         .join-btn-header { background: transparent; border: 1px solid #5f6368; padding: 8px 16px; border-radius: 4px; font-weight: 500; cursor: pointer; transition: 0.2s; }
         .join-btn-header:hover { background-color: #f5f5f5; color: #00C060; border-color: #00C060; }
-
         .profile-pic { width: 35px; height: 35px; border-radius: 50%; background-color: #00C060; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
 
         /* --- LAYOUT --- */
@@ -36,10 +50,9 @@
         .sidebar-divider { margin: 10px 0; border-top: 1px solid #e0e0e0; }
         .sub-item { padding-left: 24px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* --- CARD GRID (HOME VIEW) --- */
+        /* --- CARD GRID --- */
         .section-title { font-size: 24px; font-weight: 400; color: #3c4043; margin-bottom: 20px; }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-        
         .class-card { background: white; border: 1px solid #dadce0; border-radius: 8px; overflow: visible; display: flex; flex-direction: column; height: 280px; cursor: pointer; transition: box-shadow 0.2s; position: relative; }
         .class-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .card-header-bg { height: 100px; padding: 16px; color: white; background: linear-gradient(135deg, #00C060, #009c4d); position: relative; border-radius: 8px 8px 0 0; }
@@ -50,15 +63,12 @@
         .card-avatar { width: 70px; height: 70px; border-radius: 50%; position: absolute; top: -35px; right: 16px; background-color: #1a73e8; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 3px solid white; }
         .card-footer { height: 50px; border-top: 1px solid #dadce0; display: flex; align-items: center; justify-content: flex-end; padding: 0 16px; position: relative; }
 
-        /* --- SINGLE CLASS VIEW --- */
+        /* --- SINGLE CLASS --- */
         .class-nav-tabs { display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 0; padding: 0 24px; }
         .nav-tab { padding: 16px 24px; text-decoration: none; color: #5f6368; font-weight: 500; border-bottom: 3px solid transparent; cursor: pointer; }
         .nav-tab:hover { background-color: #f5f5f5; color: #202124; }
         .nav-tab.active-tab { color: #00C060; border-bottom-color: #00C060; }
-        
         .class-content-area { max-width: 1000px; margin: 0 auto; padding: 24px; }
-
-        /* Stream Banner */
         .class-banner { height: 240px; border-radius: 8px; background-image: url('https://gstatic.com/classroom/themes/img_read.jpg'); background-size: cover; background-position: center; position: relative; margin-bottom: 24px; }
         .class-banner-content { position: absolute; bottom: 20px; left: 25px; color: white; }
         .banner-title { font-size: 32px; font-weight: 600; }
@@ -66,33 +76,24 @@
 
         .stream-grid { display: grid; grid-template-columns: 200px 1fr; gap: 24px; }
         .upcoming-box { border: 1px solid #dadce0; border-radius: 8px; padding: 16px; background: white; height: fit-content; }
-        
-        /* Interactive Stream Post */
         .stream-post { border: 1px solid #dadce0; border-radius: 8px; background: white; padding: 16px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; cursor: pointer; transition: 0.2s; }
         .stream-post:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.2); background-color: #fafafa; }
         .post-icon { width: 40px; height: 40px; border-radius: 50%; background-color: #00C060; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        
-        /* Classwork Item */
         .cw-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; }
         .cw-item:hover { background-color: #f5f5f5; padding-left: 10px; padding-right: 10px; }
-        
-        /* People */
         .people-header { color: #00C060; font-size: 30px; border-bottom: 1px solid #00C060; padding-bottom: 10px; margin-bottom: 20px; margin-top: 30px; display: flex; justify-content: space-between; align-items: center; }
         .person-row { display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         .person-avatar { width: 32px; height: 32px; background: #00C060; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 
-        /* --- CARD MENU --- */
+        /* --- MENUS & MODALS --- */
         .menu-btn { color: #5f6368; padding: 8px; border-radius: 50%; cursor: pointer; }
         .card-menu-dropdown { display: none; position: absolute; bottom: 40px; right: 10px; background: white; min-width: 160px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); border-radius: 4px; z-index: 100; padding: 8px 0; }
         .card-menu-dropdown.show { display: block; }
         .menu-option { padding: 10px 20px; color: #333; font-size: 14px; cursor: pointer; }
         .menu-option:hover { background-color: #f5f5f5; }
 
-        /* --- MODALS --- */
         .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal-content { background: white; border-radius: 8px; width: 400px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
-        
-        /* Assignment Detail Modal (Larger) */
         .assignment-modal { width: 700px; max-width: 90%; }
         .assignment-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
         .assignment-title { font-size: 24px; color: #00C060; }
@@ -135,18 +136,15 @@
     </header>
 
     <div class="app-container">
-        
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-item active" id="nav-home" onclick="setView('home')">
                 <i class="fa-solid fa-house"></i> Home
             </div>
-            
             <div class="sidebar-divider"></div>
             <div class="sidebar-item" style="cursor: default; color: #5f6368;">
                 <i class="fa-solid fa-graduation-cap"></i> Enrolled
             </div>
             <div id="sidebar-class-list"></div>
-
             <div class="sidebar-divider"></div>
             <div class="sidebar-item" id="nav-archive" onclick="setView('archived')">
                 <i class="fa-solid fa-box-archive"></i> Archived Classes
@@ -156,8 +154,7 @@
             </div>
         </aside>
 
-        <main class="main-content" id="main-content">
-            </main>
+        <main class="main-content" id="main-content"></main>
     </div>
 
     <div id="joinModal" class="modal-overlay">
@@ -180,12 +177,9 @@
                 <span style="cursor:pointer; font-size:24px;" onclick="closeAssignmentModal()">&times;</span>
             </div>
             <div class="assignment-meta" id="asDetailMeta">Posted on...</div>
-            
             <div class="assignment-desc" id="asDetailDesc"></div>
+            <div id="quizContainer" style="display:none; background:#f0f8ff; padding:20px; border-radius:8px; margin-bottom:20px;"></div>
             
-            <div id="quizContainer" style="display:none; background:#f0f8ff; padding:20px; border-radius:8px; margin-bottom:20px;">
-                </div>
-
             <div class="submission-area">
                 <div class="submission-header">
                     <span>Your Work</span>
@@ -196,6 +190,7 @@
                     <input type="file" id="submitFile" hidden onchange="handleFileSelect(this)">
                     <span id="fileNameDisplay"><i class="fa-solid fa-plus"></i> Add or Create</span>
                 </div>
+
                 <textarea id="submissionComment" class="input-field" placeholder="Add a private comment..." rows="3" style="resize: none; margin-top: 10px;"></textarea>
                 
                 <button class="btn-submit" style="width:100%; margin-top:15px;" id="btnMarkDone" onclick="submitAssignment()">Mark as Done</button>
@@ -214,7 +209,7 @@
         let currentView = 'home'; 
         let currentClassId = null; 
         let currentClassData = null; 
-        let currentOpenItem = null; // Store currently opened assignment
+        let currentOpenItem = null; 
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -227,7 +222,7 @@
         async function fetchEnrolledClasses() {
             try {
                 const { data, error } = await _supabase.from('enrollments')
-                    .select(`class_id, classes:classes ( id, title, section, teacher_id, teacher:profiles ( full_name ) )`)
+                    .select(`class_id, classes:classes ( id, title, section, teacher_id, meeting_active, teacher:profiles ( full_name ) )`)
                     .eq('student_id', currentUser.id);
                 if (error) throw error;
                 allEnrollments = data || [];
@@ -236,6 +231,27 @@
                     renderMainGrid();
                 }
             } catch (err) { console.error(err); }
+        }
+
+        // --- REALTIME LISTENER ---
+        function subscribeToClassStatus(classId) {
+            _supabase
+                .channel('class-status')
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'classes', 
+                    filter: `id=eq.${classId}` 
+                }, payload => {
+                    if (currentClassData && currentClassId == classId) {
+                        currentClassData.meeting_active = payload.new.meeting_active;
+                        const activeTab = document.querySelector('.nav-tab.active-tab');
+                        if (activeTab && activeTab.id === 'tab-stream') {
+                            renderStream(document.getElementById('main-content'));
+                        }
+                    }
+                })
+                .subscribe();
         }
 
         function renderSidebar() {
@@ -257,7 +273,6 @@
             });
         }
 
-        // --- NAVIGATION LOGIC ---
         function setView(view) {
             currentView = view;
             currentClassId = null;
@@ -330,26 +345,26 @@
             main.innerHTML = html;
         }
 
-        // --- SINGLE CLASS LOGIC ---
         async function openClass(classId) {
             currentView = 'class';
             currentClassId = classId;
             const enrollment = allEnrollments.find(e => e.class_id == classId);
             if (!enrollment) return;
-            currentClassData = enrollment.classes;
+            
+            const { data: cls } = await _supabase.from('classes').select('*').eq('id', classId).single();
+            currentClassData = cls || enrollment.classes;
 
             document.getElementById('class-tabs-container').style.display = 'flex';
             renderSidebar();
             switchClassTab('stream');
+            subscribeToClassStatus(classId);
         }
 
         function switchClassTab(tabName) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active-tab'));
             document.getElementById(`tab-${tabName}`).classList.add('active-tab');
-
             const main = document.getElementById('main-content');
             main.innerHTML = '<div style="text-align:center; padding:50px; color:#777;">Loading...</div>';
-
             if (tabName === 'stream') renderStream(main);
             else if (tabName === 'classwork') renderClasswork(main);
             else if (tabName === 'people') renderPeople(main);
@@ -364,7 +379,6 @@
                 posts.forEach(post => {
                     const icon = post.type === 'assignment' ? 'fa-clipboard-list' : 'fa-book-bookmark';
                     const date = new Date(post.created_at).toLocaleDateString();
-                    // MAKE POST CLICKABLE: Calls openItem(post.id)
                     postsHtml += `
                     <div class="stream-post" onclick="openItem('${post.id}')">
                         <div class="post-icon"><i class="fa-solid ${icon}"></i></div>
@@ -378,6 +392,12 @@
                 postsHtml = `<div style="text-align:center; color:#888; padding:20px;">No posts yet.</div>`;
             }
 
+            const meetingButton = currentClassData.meeting_active ? `
+                <button class="btn-virtual-class" onclick="joinMeeting()">
+                    <i class="fa-solid fa-video"></i> Join Virtual Class
+                </button>
+            ` : '';
+
             container.innerHTML = `
                 <div class="class-content-area">
                     <div class="class-banner">
@@ -390,13 +410,10 @@
                         <div class="upcoming-box">
                             <div style="font-size:14px; font-weight:600; margin-bottom:10px;">Upcoming</div>
                             <div style="font-size:12px; color:#5f6368;">No work due soon</div>
+                            ${meetingButton}
                             <div style="margin-top:10px; text-align:right; font-size:13px; font-weight:500; color:#00C060; cursor:pointer;">View all</div>
                         </div>
                         <div class="stream-feed">
-                            <div class="stream-post" style="box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: default;">
-                                <div class="profile-pic" style="margin-right:15px;">S</div>
-                                <div style="font-size:13px; color:#5f6368; flex-grow:1;">Announce something to your class</div>
-                            </div>
                             ${postsHtml}
                         </div>
                     </div>
@@ -404,17 +421,21 @@
             `;
         }
 
+        function joinMeeting() {
+            const roomName = "TechHub_Room_" + currentClassId;
+            const jitsiUrl = `https://meet.ffmuc.net/${roomName}`;
+            window.open(jitsiUrl, '_blank');
+        }
+
         async function renderClasswork(container) {
             const { data: works } = await _supabase.from('classwork')
                 .select('*').eq('class_id', currentClassId).order('created_at', {ascending: false});
 
             let html = `<div class="class-content-area"><h2 style="margin-bottom:20px; font-weight:400; color:#00C060;">Classwork</h2>`;
-            
             if(works && works.length > 0) {
                 works.forEach(w => {
                     const icon = w.type === 'assignment' ? 'fa-clipboard-list' : 'fa-book-bookmark';
                     const color = w.type === 'assignment' ? '#00C060' : '#999';
-                    // MAKE ITEM CLICKABLE: Calls openItem(w.id)
                     html += `
                     <div class="cw-item" onclick="openItem('${w.id}')">
                         <div style="display:flex; align-items:center; gap:15px;">
@@ -436,12 +457,18 @@
         async function renderPeople(container) {
             const { data: students } = await _supabase.from('enrollments')
                 .select(`student:profiles(full_name)`).eq('class_id', currentClassId);
-            const teacherName = currentClassData.teacher ? currentClassData.teacher.full_name : "Unknown";
+            
+            let teacherName = "Instructor";
+            if (currentClassData.teacher && currentClassData.teacher.full_name) {
+                teacherName = currentClassData.teacher.full_name;
+            } else {
+                const { data: prof } = await _supabase.from('profiles').select('full_name').eq('id', currentClassData.teacher_id).single();
+                if (prof) teacherName = prof.full_name;
+            }
 
             let html = `<div class="class-content-area">`;
             html += `<div class="people-header">Teachers</div><div class="person-row"><div class="person-avatar"><i class="fa-solid fa-user"></i></div><span style="font-weight:500;">${teacherName}</span></div>`;
             html += `<div class="people-header">Classmates <span style="font-size:14px; color:#00C060;">${students?students.length:0} students</span></div>`;
-            
             if (students && students.length > 0) {
                 students.forEach(s => {
                     const name = s.student ? s.student.full_name : "Student";
@@ -454,57 +481,84 @@
             container.innerHTML = html;
         }
 
-        // --- ASSIGNMENT DETAILS & SUBMISSION LOGIC ---
+        // --- MERGED OPEN ITEM: FETCHES STATUS + GRADE ---
         async function openItem(itemId) {
-            // 1. Fetch details
+            // 1. Fetch Details
             const { data: item, error } = await _supabase.from('classwork').select('*').eq('id', itemId).single();
             if (error || !item) return alert("Error loading details");
-            
             currentOpenItem = item;
 
-            // 2. Populate Modal
             document.getElementById('asDetailTitle').innerText = item.title;
             const date = new Date(item.created_at).toLocaleString();
             document.getElementById('asDetailMeta').innerText = `Posted on ${date}`;
             document.getElementById('asDetailDesc').innerText = item.description || "No instructions provided.";
 
-            // 3. Check for Quiz Data
+            // 2. Fetch Submission Status (Crucial Step)
+            const { data: sub } = await _supabase
+                .from('submissions')
+                .select('*')
+                .eq('student_id', currentUser.id)
+                .eq('classwork_id', itemId)
+                .maybeSingle();
+
+            // 3. Update UI based on Status/Grade
+            const statusEl = document.getElementById('submissionStatus');
+            const btn = document.getElementById('btnMarkDone');
+            const fileLabel = document.getElementById('fileNameDisplay');
+            const commentBox = document.getElementById('submissionComment');
+
+            // Defaults
+            fileLabel.innerHTML = '<i class="fa-solid fa-plus"></i> Add or Create';
+            commentBox.value = '';
+            
+            if (sub) {
+                if (sub.status === 'graded') {
+                    statusEl.innerHTML = `<span style="color:#137333; font-weight:bold; font-size:18px;">${sub.grade}/100</span>`;
+                    btn.innerText = "Resubmit"; 
+                } else if (sub.status === 'submitted') {
+                    statusEl.innerText = "Turned In";
+                    statusEl.style.color = "#1a73e8";
+                    btn.innerText = "Unsubmit";
+                }
+
+                if (sub.file_url) {
+                    fileLabel.innerHTML = `<i class="fa-solid fa-file-check"></i> <a href="${sub.file_url}" target="_blank" style="text-decoration:none; color:inherit;">View Submitted File</a>`;
+                }
+                if (sub.content) commentBox.value = sub.content;
+            } else {
+                statusEl.innerText = "Assigned";
+                statusEl.style.color = "#666";
+                btn.innerText = "Mark as Done";
+            }
+
+            // 4. Render Quiz
             const quizDiv = document.getElementById('quizContainer');
             quizDiv.innerHTML = '';
             if (item.type === 'quiz' && item.quiz_data) {
                 quizDiv.style.display = 'block';
                 let qData = item.quiz_data;
                 if(typeof qData === 'string') { try{qData = JSON.parse(qData)}catch(e){} }
-                
                 if (Array.isArray(qData)) {
                     let qHtml = '<h3>Quiz Questions</h3>';
                     qData.forEach((q, idx) => {
                          qHtml += `<div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:10px;">
                                     <b>${idx+1}. ${q.question}</b><br>
                                     <span style="color:#555">Answer: ${q.answer}</span>
-                                   </div>`;
+                                    </div>`;
                     });
                     quizDiv.innerHTML = qHtml;
                 }
             } else if (item.file_name) {
-                // If it's a file upload assignment (PDF)
                 quizDiv.style.display = 'block';
                 quizDiv.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Attached: <b>${item.file_name}</b>`;
             } else {
                 quizDiv.style.display = 'none';
             }
 
-            // 4. Reset Submission Box
-            document.getElementById('fileNameDisplay').innerHTML = '<i class="fa-solid fa-plus"></i> Add or Create';
-            document.getElementById('btnMarkDone').innerText = "Mark as Done";
-            
-            // 5. Open Modal
             document.getElementById('assignmentModal').style.display = 'flex';
         }
 
-        function closeAssignmentModal() {
-            document.getElementById('assignmentModal').style.display = 'none';
-        }
+        function closeAssignmentModal() { document.getElementById('assignmentModal').style.display = 'none'; }
 
         function handleFileSelect(input) {
             if (input.files && input.files[0]) {
@@ -514,64 +568,53 @@
         }
 
         async function submitAssignment() {
-    const btn = document.getElementById('btnMarkDone');
-    const fileInput = document.getElementById('submitFile');
-    const commentInput = document.getElementById('submissionComment');
-    
-    // 1. Validation: Make sure a file is selected
-    if (!fileInput.files || fileInput.files.length === 0) {
-        alert("Please attach a file before marking as done.");
-        return;
-    }
+            const btn = document.getElementById('btnMarkDone');
+            const fileInput = document.getElementById('submitFile');
+            const commentInput = document.getElementById('submissionComment');
+            
+            btn.innerText = "Submitting..."; 
+            btn.disabled = true;
 
-    btn.innerText = "Uploading..."; 
-    btn.disabled = true;
+            try {
+                let fileUrl = null;
+                // Check if file is selected for upload
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const filePath = `${currentUser.id}/${currentOpenItem.id}/${Date.now()}_${file.name}`;
+                    const { data: uploadData, error: uploadError } = await _supabase.storage
+                        .from('homework_files')
+                        .upload(filePath, file);
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: publicUrlData } = _supabase.storage.from('homework_files').getPublicUrl(filePath);
+                    fileUrl = publicUrlData.publicUrl;
+                }
 
-    try {
-        const file = fileInput.files[0];
-        const comment = commentInput.value;
+                const payload = {
+                    student_id: currentUser.id,
+                    classwork_id: currentOpenItem.id,
+                    status: 'submitted',
+                    content: commentInput.value,
+                    grade: null // Reset grade on resubmission
+                };
+                if (fileUrl) payload.file_url = fileUrl;
 
-        // --- STEP A: Upload File to Supabase Storage ---
-        // We create a unique path: student_id / classwork_id / filename
-        const filePath = `${currentUser.id}/${currentOpenItem.id}/${Date.now()}_${file.name}`;
-        
-        const { data: uploadData, error: uploadError } = await _supabase.storage
-            .from('homework_files') // Make sure this matches your Bucket name!
-            .upload(filePath, file);
+                const { error } = await _supabase.from('submissions').upsert(payload, { onConflict: 'student_id, classwork_id' });
 
-        if (uploadError) throw uploadError;
+                if (error) throw error;
+                alert("Work submitted successfully!");
+                closeAssignmentModal();
 
-        // --- STEP B: Get the Public Link ---
-        const { data: { publicUrl } } = _supabase.storage
-            .from('homework_files')
-            .getPublicUrl(filePath);
+            } catch(e) {
+                console.error(e);
+                alert("Error submitting: " + e.message);
+            } finally {
+                btn.innerText = "Mark as Done"; 
+                btn.disabled = false;
+            }
+        }
 
-        // --- STEP C: Save Data to "submissions" Table ---
-        const { error: dbError } = await _supabase.from('submissions').upsert({
-            student_id: currentUser.id,
-            classwork_id: currentOpenItem.id,
-            file_url: publicUrl,       // The link to the file we just uploaded
-            content: comment,          // The "dsadas" text
-            status: 'submitted',
-            grade: null,               // Reset grade since it's a new submission
-            created_at: new Date().toISOString()
-        }, { onConflict: 'student_id, classwork_id' }); // Ensures we update if they submit again
-
-        if (dbError) throw dbError;
-
-        alert("Work submitted successfully!");
-        closeAssignmentModal();
-
-    } catch(e) {
-        console.error(e);
-        alert("Error submitting: " + e.message);
-    } finally {
-        btn.innerText = "Mark as Done"; 
-        btn.disabled = false;
-    }
-}
-
-        // --- UTILS ---
         function getStatus(classId) { return localStorage.getItem(`status_${currentUser.id}_${classId}`) || 'active'; }
         function setClassStatus(classId, status) {
             if (status === 'unenrolled' && !confirm("Unenroll?")) return;

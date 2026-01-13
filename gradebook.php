@@ -43,14 +43,13 @@ session_start();
     
     .cell-wrapper { display: flex; align-items: center; gap: 8px; }
     .grade-input { width: 50px; padding: 5px; border: 1px solid transparent; text-align: center; border-radius: 4px; background: transparent; font-weight: 500; }
-    .grade-input:hover { border-color: #ddd; background: #fff; }
-    .grade-input:focus { border-color: #1a73e8; outline: none; background: #fff; }
+    .grade-input:disabled { color: #333; cursor: default; }
     
     /* Status Icons */
     .status-icon { cursor: pointer; font-size: 14px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s; }
     .status-submitted { color: #1a73e8; background: #e8f0fe; }
-    .status-submitted:hover { background: #d2e3fc; }
-    .status-missing { color: #d93025; font-size: 12px; }
+    .status-graded { color: #137333; background: #e6f4ea; }
+    .status-missing { color: #d93025; font-size: 12px; background: #fce8e6; }
 
     .student-row:hover { background-color: #fcfcfc; }
     .assignment-header { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
@@ -172,149 +171,120 @@ session_start();
         }
     }
 
-   async function loadGradebook() {
-    const classId = document.getElementById('classSelect').value;
-    const wrapper = document.getElementById('gradebook-wrapper');
-    const loading = document.getElementById('loading-state');
-    const theadRow = document.getElementById('tableHeaderRow');
-    const tbody = document.getElementById('tableBody');
+    // --- MAIN GRADEBOOK LOGIC (UPDATED TO READ FROM SUBMISSIONS) ---
+    async function loadGradebook() {
+        const classId = document.getElementById('classSelect').value;
+        const wrapper = document.getElementById('gradebook-wrapper');
+        const loading = document.getElementById('loading-state');
+        const theadRow = document.getElementById('tableHeaderRow');
+        const tbody = document.getElementById('tableBody');
 
-    if(!classId) return;
+        if(!classId) return;
+        wrapper.style.display = 'none'; loading.style.display = 'block'; loading.innerText = "Loading grades...";
 
-    // Show loading state
-    wrapper.style.display = 'none'; 
-    loading.style.display = 'block'; 
-    loading.innerText = "Loading grades...";
+        try {
+            // 1. Fetch Students
+            const { data: enrollments } = await supabaseClient
+                .from('enrollments')
+                .select('student_id, student:profiles!student_id(full_name)')
+                .eq('class_id', classId);
+            
+            // 2. Fetch Assignments
+            const { data: assignments } = await supabaseClient
+                .from('classwork')
+                .select('id, title, due_date')
+                .eq('class_id', classId)
+                .order('created_at', { ascending: true });
 
-    try {
-        // 1. Fetch Students
-        const { data: enrollments } = await supabaseClient
-            .from('enrollments')
-            .select('student_id, student:profiles!student_id(full_name)')
-            .eq('class_id', classId);
-        
-        // 2. Fetch Assignments
-        const { data: assignments } = await supabaseClient
-            .from('classwork')
-            .select('id, title, due_date')
-            .eq('class_id', classId)
-            .order('created_at', { ascending: true });
+            // 3. FETCH SUBMISSIONS (Source of Grades)
+            const assignmentIds = assignments.map(a => a.id);
+            let submissionsMap = {};
+            
+            if (assignmentIds.length > 0) {
+                const { data: subs } = await supabaseClient
+                    .from('submissions')
+                    .select('student_id, classwork_id, grade, status, content, file_url, created_at')
+                    .in('classwork_id', assignmentIds);
+                    
+                if (subs) {
+                    subs.forEach(s => { 
+                        submissionsMap[`${s.student_id}-${s.classwork_id}`] = s; 
+                    });
+                }
+            }
 
-        // 3. FETCH SUBMISSIONS (This is now your source of grades)
-        const assignmentIds = assignments.map(a => a.id);
-        let submissionsMap = {};
-        
-        if (assignmentIds.length > 0) {
-            const { data: subs } = await supabaseClient
-                .from('submissions')
-                .select('student_id, classwork_id, grade, status, content, file_url, created_at')
-                .in('classwork_id', assignmentIds);
-                
-            // Map data so we can find it easily: "studentID-assignmentID" -> Submission Object
-            if (subs) {
-                subs.forEach(s => { 
-                    submissionsMap[`${s.student_id}-${s.classwork_id}`] = s; 
+            // --- BUILD HEADER ---
+            let headerHtml = '<th>Student Name</th><th style="background:#e8f0fe; color:#1a73e8; text-align:center;">Average</th>';
+            assignments.forEach(a => {
+                headerHtml += `<th><div class="assignment-header" title="${a.title}">${a.title}</div><span class="date-sub">${a.due_date ? new Date(a.due_date).toLocaleDateString() : '-'}</span></th>`;
+            });
+            theadRow.innerHTML = headerHtml;
+
+            // --- BUILD BODY ---
+            tbody.innerHTML = '';
+            
+            if (!enrollments || enrollments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="100%" style="text-align:center; padding:20px;">No students enrolled yet.</td></tr>';
+            } else {
+                enrollments.forEach(enr => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'student-row';
+                    
+                    // CALCULATE AVERAGE
+                    let totalScore = 0;
+                    let gradedCount = 0;
+                    assignments.forEach(a => {
+                        const key = `${enr.student_id}-${a.id}`;
+                        const sub = submissionsMap[key];
+                        if (sub && sub.grade !== null && sub.grade !== "") {
+                            totalScore += parseInt(sub.grade);
+                            gradedCount++;
+                        }
+                    });
+                    const average = gradedCount > 0 ? Math.round(totalScore / gradedCount) : 0;
+                    const avgColor = average >= 75 ? '#137333' : '#d93025';
+
+                    let rowHtml = `
+                        <td style="font-weight:500;">${enr.student ? enr.student.full_name : 'Unknown'}</td>
+                        <td style="text-align:center; font-weight:bold; color:${avgColor}; background:#f8f9fa;">${average}%</td>
+                    `;
+
+                    // RENDER CELLS
+                    assignments.forEach(a => {
+                        const key = `${enr.student_id}-${a.id}`;
+                        const sub = submissionsMap[key];
+                        
+                        const score = (sub && sub.grade !== null) ? sub.grade : '';
+                        let statusIcon = '<div class="status-icon status-missing" title="No work"><i class="fa-solid fa-minus"></i></div>';
+
+                        if (sub) {
+                            // Escape quotes for onclick
+                            const safeContent = sub.content ? sub.content.replace(/"/g, '&quot;') : '';
+                            const safeFile = sub.file_url ? sub.file_url : '';
+                            const safeDate = new Date(sub.created_at).toLocaleDateString();
+
+                            if (sub.status === 'graded') {
+                                statusIcon = `<div class="status-icon status-graded" onclick='viewSubmission("${safeContent}", "${safeFile}", "${safeDate}")'><i class="fa-solid fa-check"></i></div>`;
+                            } else {
+                                statusIcon = `<div class="status-icon status-submitted" onclick='viewSubmission("${safeContent}", "${safeFile}", "${safeDate}")'><i class="fa-solid fa-eye"></i></div>`;
+                            }
+                        }
+
+                        rowHtml += `<td>
+                            <div class="cell-wrapper">
+                                ${statusIcon}
+                                <input type="number" class="grade-input" value="${score}" placeholder="-" disabled>
+                            </div>
+                        </td>`;
+                    });
+                    tr.innerHTML = rowHtml;
+                    tbody.appendChild(tr);
                 });
             }
-        }
 
-        // --- BUILD HEADER ---
-        // We add an extra column for "Average"
-        let headerHtml = '<th>Student Name</th><th style="background:#e8f0fe; color:#1a73e8; text-align:center;">Average</th>';
-        assignments.forEach(a => {
-            headerHtml += `<th><div class="assignment-header" title="${a.title}">${a.title}</div><span class="date-sub">${a.due_date ? new Date(a.due_date).toLocaleDateString() : '-'}</span></th>`;
-        });
-        theadRow.innerHTML = headerHtml;
+            loading.style.display = 'none'; wrapper.style.display = 'block';
 
-        // --- BUILD BODY ---
-        tbody.innerHTML = '';
-        
-        if (!enrollments || enrollments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="100%" style="text-align:center; padding:20px;">No students enrolled yet.</td></tr>';
-        } else {
-            enrollments.forEach(enr => {
-                const tr = document.createElement('tr');
-                tr.className = 'student-row';
-                
-                // --- CALCULATE AVERAGE based on SUBMISSIONS table ---
-                let totalScore = 0;
-                let gradedCount = 0;
-                
-                assignments.forEach(a => {
-                    const key = `${enr.student_id}-${a.id}`;
-                    const sub = submissionsMap[key];
-                    
-                    // Only count if submission exists AND has a grade
-                    if (sub && sub.grade !== null) {
-                        totalScore += parseInt(sub.grade);
-                        gradedCount++;
-                    }
-                });
-
-                const average = gradedCount > 0 ? Math.round(totalScore / gradedCount) : 0;
-                // Green if 75+, Red if below
-                const avgColor = average >= 75 ? '#137333' : '#d93025';
-
-                let rowHtml = `
-                    <td style="font-weight:500;">${enr.student ? enr.student.full_name : 'Unknown'}</td>
-                    <td style="text-align:center; font-weight:bold; color:${avgColor}; background:#f8f9fa;">${average}%</td>
-                `;
-
-                // --- RENDER CELLS ---
-                assignments.forEach(a => {
-                    const key = `${enr.student_id}-${a.id}`;
-                    const sub = submissionsMap[key];
-                    
-                    // Determine values to display
-                    const score = (sub && sub.grade !== null) ? sub.grade : '';
-                    let statusIcon = '<div class="status-icon status-missing" title="No work submitted"><i class="fa-solid fa-minus"></i></div>';
-
-                    if (sub) {
-                        // Sanitize content for the onClick function
-                        const safeContent = sub.content ? sub.content.replace(/"/g, '&quot;') : '';
-                        const safeFile = sub.file_url ? sub.file_url : '';
-                        const safeDate = new Date(sub.created_at).toLocaleDateString();
-
-                        if (sub.status === 'graded') {
-                            // Green Check for Graded
-                            statusIcon = `<div class="status-icon" style="color:#137333; background:#e6f4ea;" onclick='viewSubmission("${safeContent}", "${safeFile}", "${safeDate}")' title="View Submission"><i class="fa-solid fa-check"></i></div>`;
-                        } else {
-                            // Blue Eye for Submitted (Needs Grading)
-                            statusIcon = `<div class="status-icon" style="color:#1a73e8; background:#e8f0fe;" onclick='viewSubmission("${safeContent}", "${safeFile}", "${safeDate}")' title="View Submission"><i class="fa-solid fa-eye"></i></div>`;
-                        }
-                    }
-
-                    // Input is disabled here because grading happens inside the modal (via viewSubmission)
-                    rowHtml += `<td>
-                        <div class="cell-wrapper">
-                            ${statusIcon}
-                            <input type="number" class="grade-input" value="${score}" placeholder="-" disabled style="background:transparent; border:none; color:#333; cursor:default;">
-                        </div>
-                    </td>`;
-                });
-                
-                tr.innerHTML = rowHtml;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Hide loader, show table
-        loading.style.display = 'none'; 
-        wrapper.style.display = 'block';
-
-    } catch (err) { 
-        console.error(err); 
-        loading.innerText = "Error loading data."; 
-    }
-}
-    async function saveGrade(studentId, classworkId, value) {
-        if (value === '') return;
-        const { data: existing } = await supabaseClient.from('grades').select('id').eq('student_id', studentId).eq('classwork_id', classworkId).single();
-        if (existing) {
-            await supabaseClient.from('grades').update({ score: value }).eq('id', existing.id);
-        } else {
-            await supabaseClient.from('grades').insert([{ student_id: studentId, classwork_id: classworkId, score: value }]);
-        }
+        } catch (err) { console.error(err); loading.innerText = "Error loading data."; }
     }
 
     function viewSubmission(content, fileUrl, date) {

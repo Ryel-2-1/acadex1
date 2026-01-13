@@ -88,7 +88,6 @@ session_start();
     /* MODALS & INPUTS */
     .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; border-radius: 8px; width: 550px; padding: 0; box-shadow: 0 24px 38px rgba(0,0,0,0.14); }
-    /* Grading modal specific width */
     .modal-content.grading-modal { width: 700px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
     
     .modal-header { padding: 15px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
@@ -100,9 +99,6 @@ session_start();
     .btn-cancel { background: white; border: 1px solid #ddd; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
     .btn-go { background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 
-    .upload-area-small { border: 2px dashed #dadce0; padding: 20px; text-align: center; background: #f8f9fa; cursor: pointer; color: #1a73e8; font-weight: 500; border-radius: 6px; transition: 0.2s; }
-    .upload-area-small:hover { background: #eef6fc; border-color: #1a73e8; }
-
     .dropdown-menu { display: none; position: absolute; top: 45px; right: 0; width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000; text-align: left; }
     .dropdown-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #333; font-size: 14px; font-weight: 500; }
     .dropdown-item:hover { background: #f5f5f5; }
@@ -113,18 +109,16 @@ session_start();
     .icon-assign { background: #e37400; }
     .icon-quiz { background: #1a73e8; }
 
-    #detailView { display: none; }
-    
-    /* Loading Overlay */
-    #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
-
     /* Grading List Styles */
     .submission-row { border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
     .sub-meta { font-size: 12px; color: #5f6368; margin-top: 4px; }
     .file-link { display: inline-block; margin-top: 10px; color: #1a73e8; text-decoration: none; border: 1px solid #dadce0; padding: 5px 12px; border-radius: 15px; font-size: 13px; }
     .file-link:hover { background: #f1f3f4; }
-    .student-comment { background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px; font-style: italic; color: #555; }
     .grade-box { text-align: right; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+    .student-comment { background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px; font-style: italic; color: #555; }
+
+    #detailView { display: none; }
+    #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
 </style>
 </head>
 <body>
@@ -183,7 +177,6 @@ session_start();
                                 <i class="fa-regular fa-copy copy-icon" onclick="copyCode()" title="Copy Code"></i>
                             </div>
                         </div>
-
                         <div class="class-banner-content">
                             <div>
                                 <h1 id="bannerTitle">Loading...</h1>
@@ -238,18 +231,6 @@ session_start();
                 <div class="input-group"><label>Section</label><input type="text" id="newClassSection"></div>
             </div>
             <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createClass()">Create</button></div>
-        </div>
-    </div>
-
-    <div id="editClassModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h2>Rename Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
-            <div class="modal-body">
-                <input type="hidden" id="editClassId">
-                <div class="input-group"><label>Class Name</label><input type="text" id="editClassName"></div>
-                <div class="input-group"><label>Section</label><input type="text" id="editClassSection"></div>
-            </div>
-            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="saveClassRename()">Save Changes</button></div>
         </div>
     </div>
 
@@ -315,19 +296,14 @@ session_start();
     let currentUser = null; 
     let currentClassId = null;
     let userFullName = "Teacher"; 
+    let jitsiApi = null;
 
     try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
     catch (e) { console.error(e); }
 
-    // --- MAIN INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
         const { data: { session } } = await supabaseClient.auth.getSession();
-        
-        if (!session) {
-            window.location.href = 'teacher_login.php';
-            return;
-        }
-
+        if (!session) { window.location.href = 'teacher_login.php'; return; }
         currentUser = session.user;
         await fetchUserProfile();
         document.getElementById('global-loader').style.display = 'none';
@@ -340,12 +316,7 @@ session_start();
 
     async function fetchUserProfile() {
         try {
-            const { data: profile } = await supabaseClient
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', currentUser.id)
-                .single();
-            
+            const { data: profile } = await supabaseClient.from('profiles').select('full_name, role').eq('id', currentUser.id).single();
             if (profile) {
                 userFullName = profile.full_name;
                 document.getElementById('profile-name').innerText = profile.full_name;
@@ -355,29 +326,8 @@ session_start();
         } catch (err) { console.error("Profile Error:", err); }
     }
 
-    function showFile(input, txtId) { 
-        if(input.files[0]) { 
-            document.getElementById(txtId).innerHTML = `<i class="fa-solid fa-file-pdf"></i> <b>${input.files[0].name}</b>`; 
-            document.getElementById(txtId).style.color = '#333'; 
-        } 
-    }
-
-    function showAllClasses() {
-        document.getElementById('view-all-classes').style.display = 'block';
-        document.getElementById('view-single-class').style.display = 'none';
-        document.getElementById('sidebar-all-classes').style.display = 'block';
-        document.getElementById('sidebar-single-class').style.display = 'none';
-        
-        const url = new URL(window.location);
-        url.searchParams.delete('class_id');
-        window.history.pushState({}, '', url);
-        fetchClasses();
-    }
-
     async function openClass(classId) {
         currentClassId = classId;
-        document.getElementById('nav-classes').classList.add('active');
-
         const url = new URL(window.location);
         url.searchParams.set('class_id', classId);
         window.history.pushState({}, '', url);
@@ -396,83 +346,32 @@ session_start();
         fetchClasswork();
     }
 
-    function copyCode() {
-        const code = document.getElementById('bannerCode').innerText;
-        navigator.clipboard.writeText(code).then(() => alert("Code copied!"));
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
-        document.getElementById('tab-'+tab).classList.add('active');
-        document.querySelectorAll('.active-tab-content').forEach(e => e.style.display = 'none');
-        if(tab === 'stream') document.getElementById('streamSection').style.display = 'block';
-        if(tab === 'classwork') document.getElementById('classworkSection').style.display = 'block';
-        if(tab === 'people') {
-            document.getElementById('peopleSection').style.display = 'block';
-            fetchPeople();
-        }
+    function showAllClasses() {
+        document.getElementById('view-all-classes').style.display = 'block';
+        document.getElementById('view-single-class').style.display = 'none';
+        document.getElementById('sidebar-all-classes').style.display = 'block';
+        document.getElementById('sidebar-single-class').style.display = 'none';
+        const url = new URL(window.location);
+        url.searchParams.delete('class_id');
+        window.history.pushState({}, '', url);
+        fetchClasses();
     }
 
     async function fetchClasses() {
         const grid = document.getElementById('classGrid');
-        const loader = document.getElementById('loadingMsg');
-        
         const { data } = await supabaseClient.from('classes').select('*').eq('teacher_id', currentUser.id).order('created_at', { ascending: false });
-
-        loader.style.display = 'none';
+        document.getElementById('loadingMsg').style.display = 'none';
         grid.innerHTML = '';
-
         if(!data || data.length === 0) {
-            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">No classes found. Create one!</div>';
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">No classes found.</div>';
             return;
         }
-
-        const imgs = [ "https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&w=800&q=80", "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&w=800&q=80", "https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-4.0.3&w=800&q=80" ];
-
-        data.forEach((cls, idx) => {
+        data.forEach((cls) => {
             const card = document.createElement('div');
             card.className = 'class-card';
-            
-            card.innerHTML = `
-                <div class="card-actions">
-                    <div class="action-icon icon-edit" onclick="openEditModal('${cls.id}', '${cls.title}', '${cls.section}')"><i class="fa-solid fa-pen"></i></div>
-                    <div class="action-icon icon-del" onclick="deleteClass('${cls.id}')"><i class="fa-solid fa-trash"></i></div>
-                </div>
-                <div onclick="openClass('${cls.id}')">
-                    <div class="class-image"><img src="${imgs[idx % imgs.length]}"></div>
-                    <div class="class-text-content">
-                        <div class="class-title">${cls.title}</div>
-                        <div class="class-subtitle">${cls.section}</div>
-                        <div class="code-badge">Code: ${cls.class_code || '---'}</div>
-                    </div>
-                </div>
-            `;
+            card.innerHTML = `<div onclick="openClass('${cls.id}')"><div class="class-image"></div><div class="class-text-content"><div class="class-title">${cls.title}</div><div class="class-subtitle">${cls.section}</div></div></div>`;
             grid.appendChild(card);
         });
-    }
-
-    function openEditModal(id, title, section) {
-        document.getElementById('editClassId').value = id;
-        document.getElementById('editClassName').value = title;
-        document.getElementById('editClassSection').value = section;
-        document.getElementById('editClassModal').style.display = 'flex';
-    }
-
-    async function saveClassRename() {
-        const id = document.getElementById('editClassId').value;
-        const title = document.getElementById('editClassName').value;
-        const section = document.getElementById('editClassSection').value;
-        if(!title) return alert("Class name required");
-        const { error } = await supabaseClient.from('classes').update({ title, section }).eq('id', id);
-        if(error) alert("Error: " + error.message);
-        else { closeAllModals(); fetchClasses(); }
-    }
-
-    async function deleteClass(classId) {
-        if(!confirm("Are you sure you want to delete this class? This cannot be undone.")) return;
-        const { error } = await supabaseClient.from('classes').delete().eq('id', classId);
-        if(error) alert("Error deleting class: " + error.message);
-        else fetchClasses();
     }
 
     async function fetchClasswork() {
@@ -480,68 +379,32 @@ session_start();
         const list = document.getElementById('streamFeedArea');
         const items = document.getElementById('streamItemsArea');
         list.innerHTML = ''; items.innerHTML = '';
-        
         if(!data || data.length === 0) {
-            const msg = '<div style="text-align:center; color:#999; padding:20px;">No content yet.</div>';
-            list.innerHTML = msg; items.innerHTML = msg; return;
+            list.innerHTML = '<div style="text-align:center; color:#999;">No content.</div>';
+            return;
         }
-        
         data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'stream-item';
-            
-            // Store item data for click handler
             div.onclick = () => showDetail(item);
-
-            let icon = 'fa-file-lines'; let color = 'icon-assign';
-            if(item.type === 'quiz') { icon = 'fa-robot'; color = 'icon-quiz'; }
-            
-            div.innerHTML = `<div class="item-icon ${color}"><i class="fa-solid ${icon}"></i></div><div class="item-content"><div class="item-title">${item.title}</div><div class="item-meta">Posted ${new Date(item.created_at).toLocaleDateString()}</div></div>`;
-            
-            const divClone = div.cloneNode(true);
-            divClone.onclick = () => { switchTab('classwork'); showDetail(item); };
-            
-            items.appendChild(div); list.appendChild(divClone);
+            let icon = item.type === 'quiz' ? 'fa-robot' : 'fa-file-lines';
+            div.innerHTML = `<div class="item-icon ${item.type === 'quiz' ? 'icon-quiz' : 'icon-assign'}"><i class="fa-solid ${icon}"></i></div><div class="item-content"><div class="item-title">${item.title}</div><div class="item-meta">${new Date(item.created_at).toLocaleDateString()}</div></div>`;
+            items.appendChild(div); 
+            list.appendChild(div.cloneNode(true));
         });
     }
 
-    async function fetchPeople() {
-        const teacherArea = document.getElementById('teacherListArea');
-        const studentArea = document.getElementById('studentListArea');
-        const { data: classData } = await supabaseClient.from('classes').select(`teacher_id, teacher:profiles!teacher_id (full_name)`).eq('id', currentClassId).single();
-
-        if (classData) {
-            const tName = Array.isArray(classData.teacher) ? classData.teacher[0]?.full_name : classData.teacher?.full_name;
-            teacherArea.innerHTML = `<h2 style="color:#1a73e8; font-size: 30px; font-weight:400; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px;">Teachers</h2><div style="display:flex; align-items:center; gap:15px; padding: 10px 0;"><div style="width:40px; height:40px; background:#e0e0e0; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-user"></i></div><span style="font-weight:500; font-size: 16px;">${tName || 'Unknown'}</span></div>`;
-        }
-
-        const { data: students } = await supabaseClient.from('enrollments').select(`student:profiles (full_name)`).eq('class_id', currentClassId);
-        let sHtml = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;"><h2 style="color:#1a73e8; font-size: 30px; font-weight:400; margin:0;">Students</h2><span style="color:#1a73e8; font-weight:500;">${students ? students.length : 0} students</span></div>`;
-
-        if (students && students.length > 0) {
-            students.forEach(item => {
-                const name = (Array.isArray(item.student) ? item.student[0]?.full_name : item.student?.full_name) || "Student";
-                sHtml += `<div style="display:flex; align-items:center; gap:15px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;"><div style="width:35px; height:35px; background:#1967d2; color:white; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:14px;">${name.charAt(0).toUpperCase()}</div><span style="font-weight:500; color:#3c4043;">${name}</span></div>`;
-            });
-        } else { sHtml += `<div style="color:#777; font-style:italic;">No students enrolled yet.</div>`; }
-        studentArea.innerHTML = sHtml;
-    }
-
-    // --- MODIFIED: Show Detail with Grading Button ---
+    // --- Detail View Logic ---
     function showDetail(item) {
         document.getElementById('streamListView').style.display = 'none';
         document.getElementById('detailView').style.display = 'block';
         document.getElementById('detTitle').innerText = item.title;
         
+        const safeTitle = item.title.replace(/'/g, "\\'");
         let content = `<div style="display:flex; justify-content:space-between; align-items:start;">`;
         content += `<div><p style="font-size:1.1rem; color:#555;">${item.description || ''}</p>`;
-        if (item.due_date) content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p></div>`;
-        
-        // Add Button to Open Grading Modal
-        // Escape the title just in case it has quotes
-        const safeTitle = item.title.replace(/'/g, "\\'");
-        content += `<button onclick="openGradingModal('${item.id}', '${safeTitle}')" style="background:#00C060; color:white; border:none; padding:10px 20px; border-radius:25px; cursor:pointer; font-weight:600;"><i class="fa-solid fa-list-check"></i> View Submissions</button>`;
-        content += `</div>`;
+        if (item.due_date) content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p>`;
+        content += `</div><button onclick="openGradingModal('${item.id}', '${safeTitle}')" style="background:#00C060; color:white; border:none; padding:10px 20px; border-radius:25px; cursor:pointer; font-weight:600;"><i class="fa-solid fa-list-check"></i> View Submissions</button></div>`;
 
         if(item.type === 'quiz' && item.quiz_data) {
             let questions = item.quiz_data;
@@ -549,11 +412,7 @@ session_start();
             if (Array.isArray(questions)) {
                 content += `<div style="margin-top:20px;">`;
                 questions.forEach((q, i) => {
-                    let opts = '';
-                    if(Array.isArray(q.options)) {
-                        opts = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">${q.options.map(o => `<div style="background:#f8f9fa; padding:10px; border:1px solid #ddd; border-radius:4px;">${o}</div>`).join('')}</div>`;
-                    }
-                    content += `<div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;"><div style="font-weight:600; font-size:16px;">${i+1}. ${q.question}</div>${opts}<div style="margin-top:10px; color:#137333; font-weight:500;">Answer: ${q.answer}</div></div>`;
+                    content += `<div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;"><div style="font-weight:600;">${i+1}. ${q.question}</div><div style="margin-top:10px; color:#137333;">Answer: ${q.answer}</div></div>`;
                 });
                 content += `</div>`;
             }
@@ -566,185 +425,139 @@ session_start();
         document.getElementById('streamListView').style.display = 'block';
     }
 
-    // --- NEW: Grading Functions ---
-
+    // --- SEPARATED GRADING FUNCTIONS (New) ---
     async function fetchSubmissionsForClasswork(classworkId) {
-    console.log("Fetching submissions for Classwork ID:", classworkId);
+        // Fetch all submissions + student names
+        const { data: submissions, error } = await supabaseClient
+            .from('submissions')
+            .select(`*, student:profiles ( full_name, email )`)
+            .eq('classwork_id', classworkId)
+            .order('created_at', { ascending: false });
 
-    // 1. SELECT * FROM submissions WHERE classwork_id = [THE_ID]
-    // We also join 'profiles' to get the student's name
-    const { data: submissions, error } = await supabaseClient
-        .from('submissions')
-        .select(`
-            *,
-            student:profiles ( full_name, email )
-        `)
-        .eq('classwork_id', classworkId) // <--- THIS IS THE FILTER
-        .order('created_at', { ascending: false });
+        if (error) {
+            console.error("Error:", error);
+            return { toGrade: [], graded: [] };
+        }
 
-    if (error) {
-        console.error("Error fetching submissions:", error);
-        return [];
+        // Filter into two lists
+        const graded = submissions.filter(sub => sub.status === 'graded');
+        const toGrade = submissions.filter(sub => sub.status !== 'graded');
+        return { toGrade, graded };
     }
 
-    // 2. Separate them into two lists: Graded vs. Not Graded
-    const graded = submissions.filter(sub => sub.status === 'graded');
-    const toGrade = submissions.filter(sub => sub.status !== 'graded');
-
-    console.log("To Grade:", toGrade);
-    console.log("Already Graded:", graded);
-
-    return { toGrade, graded };
-}
     async function openGradingModal(classworkId, title) {
-    // Open the modal
-    document.getElementById('gradingModal').style.display = 'flex';
-    document.getElementById('gradingTitle').innerText = title;
-    const listContainer = document.getElementById('gradingList');
-    listContainer.innerHTML = 'Loading...';
+        document.getElementById('gradingModal').style.display = 'flex';
+        document.getElementById('gradingTitle').innerText = "Submissions: " + title;
+        document.getElementById('gradingList').innerHTML = '<p style="text-align:center;">Loading submissions...</p>';
 
-    // Fetch the separated data
-    const { toGrade, graded } = await fetchSubmissionsForClasswork(classworkId);
+        // 1. Fetch
+        const { toGrade, graded } = await fetchSubmissionsForClasswork(classworkId);
 
-    let html = '';
-
-    // SECTION 1: Needs Grading
-    if (toGrade.length > 0) {
-        html += `<h3 style="color:#e37400; border-bottom:2px solid #e37400; padding-bottom:5px;">Needs Grading (${toGrade.length})</h3>`;
-        toGrade.forEach(sub => {
-            html += createSubmissionCard(sub); // (Use your existing card HTML generator here)
-        });
-    } else {
-        html += `<h3 style="color:#666;">Needs Grading (0)</h3><p style="color:#999; font-style:italic;">All caught up!</p>`;
+        // 2. Render
+        renderSeparatedSubmissions(toGrade, graded);
     }
 
-    // SECTION 2: Done / Graded
-    if (graded.length > 0) {
-        html += `<h3 style="color:#137333; border-bottom:2px solid #137333; padding-bottom:5px; margin-top:30px;">Graded (${graded.length})</h3>`;
-        graded.forEach(sub => {
-            html += createSubmissionCard(sub);
-        });
-    }
-
-    listContainer.innerHTML = html;
-}
-
-// Helper to keep your HTML clean
-function createSubmissionCard(sub) {
-    const name = sub.student ? sub.student.full_name : "Unknown";
-    const gradeVal = sub.grade || "";
-    
-    return `
-    <div style="border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
-        <div style="font-weight:bold;">${name}</div>
-        <div style="font-size:12px; color:#555; margin-bottom:10px;">${new Date(sub.created_at).toLocaleString()}</div>
-        
-        ${sub.content ? `<div style="background:#f5f5f5; padding:10px; border-radius:5px; font-style:italic;">"${sub.content}"</div>` : ''}
-        ${sub.file_url ? `<div style="margin-top:5px;"><a href="${sub.file_url}" target="_blank" style="color:#1a73e8;">View File</a></div>` : ''}
-        
-        <div style="margin-top:15px; text-align:right;">
-            <input type="number" id="grade-${sub.id}" value="${gradeVal}" placeholder="/100" style="width:60px; padding:5px;">
-            <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">
-                ${sub.status === 'graded' ? 'Update Grade' : 'Submit Grade'}
-            </button>
-        </div>
-    </div>`;
-}
-
-    function renderSubmissions(subs) {
+    function renderSeparatedSubmissions(toGrade, graded) {
         const container = document.getElementById('gradingList');
         container.innerHTML = '';
-        if (!subs || subs.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#777; margin-top:20px;">No students have submitted work yet.</p>';
+
+        // SECTION A: Needs Grading
+        if (toGrade.length > 0) {
+            container.innerHTML += `<h3 style="color:#e37400; border-bottom:1px solid #ddd; padding-bottom:5px; margin-top:0;">Needs Grading (${toGrade.length})</h3>`;
+            toGrade.forEach(sub => container.innerHTML += createSubmissionCard(sub));
+        } else {
+            container.innerHTML += `<div style="padding:20px; text-align:center; color:#888; background:#f9f9f9; border-radius:8px; margin-bottom:20px;">No pending work to grade!</div>`;
+        }
+
+        // SECTION B: Already Graded
+        if (graded.length > 0) {
+            container.innerHTML += `<h3 style="color:#137333; border-bottom:1px solid #ddd; padding-bottom:5px; margin-top:30px;">Graded (${graded.length})</h3>`;
+            graded.forEach(sub => container.innerHTML += createSubmissionCard(sub));
+        }
+    }
+
+    function createSubmissionCard(sub) {
+        const name = sub.student ? sub.student.full_name : "Unknown Student";
+        const email = sub.student ? sub.student.email : "";
+        const date = new Date(sub.created_at).toLocaleString();
+        const grade = sub.grade || "";
+
+        return `
+        <div class="submission-row" style="border-left: 4px solid ${sub.status === 'graded' ? '#137333' : '#e37400'};">
+            <div style="display:flex; justify-content:space-between;">
+                <div>
+                    <div style="font-weight:600; color:#3c4043;">${name}</div>
+                    <div class="sub-meta">${email} • ${date}</div>
+                </div>
+                <div style="font-weight:bold; font-size:12px; color:${sub.status === 'graded' ? '#137333' : '#e37400'};">
+                    ${sub.status === 'graded' ? 'DONE' : 'NEEDS REVIEW'}
+                </div>
+            </div>
+
+            ${ sub.content ? `<div class="student-comment">"${sub.content}"</div>` : '' }
+            
+            ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
+
+            <div class="grade-box">
+                <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">
+                    ${sub.status === 'graded' ? 'Update Grade' : 'Return Grade'}
+                </button>
+            </div>
+        </div>`;
+    }
+
+    async function saveGrade(subId) {
+        const val = document.getElementById('grade-'+subId).value;
+        const btn = document.getElementById('grade-'+subId).nextElementSibling;
+        
+        if (val === "" || val < 0 || val > 100) {
+            alert("Please enter a valid grade (0-100)");
             return;
         }
 
-        subs.forEach(sub => {
-            const name = sub.student ? sub.student.full_name : "Unknown Student";
-            const email = sub.student ? sub.student.email : "";
-            const date = new Date(sub.created_at).toLocaleString();
-            const grade = sub.grade || "";
+        btn.innerText = "Saving...";
+        btn.disabled = true;
 
-            const html = `
-            <div class="submission-row">
-                <div style="display:flex; justify-content:space-between;">
-                    <div>
-                        <div style="font-weight:600; color:#3c4043;">${name}</div>
-                        <div class="sub-meta">${email} • ${date}</div>
-                    </div>
-                    <div style="color:${sub.status==='graded'?'#1a73e8':'#e37400'}; font-weight:500; font-size:13px; text-transform:uppercase;">${sub.status}</div>
-                </div>
+        // Update ONLY the submissions table
+        const { error } = await supabaseClient
+            .from('submissions')
+            .update({ grade: val, status: 'graded' })
+            .eq('id', subId);
 
-                ${ sub.content ? `<div class="student-comment">"${sub.content}"</div>` : '' }
-                
-                ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
-
-                <div class="grade-box">
-                    <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
-                    <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">Return Grade</button>
-                </div>
-            </div>`;
-            container.innerHTML += html;
-        });
-    }
-
-    // REPLACE your existing saveGrade function with this:
-async function saveGrade(subId) {
-    const val = document.getElementById('grade-'+subId).value;
-    const btn = document.getElementById('grade-'+subId).nextElementSibling;
-    
-    // 1. Validate input
-    if (val === "" || val < 0 || val > 100) {
-        alert("Please enter a valid grade (0-100)");
-        return;
-    }
-
-    btn.innerText = "Saving...";
-    btn.disabled = true;
-
-    // 2. Update ONLY the submissions table
-    // We update the 'grade' column and set status to 'graded'
-    const { error } = await supabaseClient
-        .from('submissions')
-        .update({ 
-            grade: val, 
-            status: 'graded' 
-        })
-        .eq('id', subId);
-
-    if(error) {
-        console.error(error);
-        alert("Error saving grade: " + error.message);
-        btn.innerText = "Return Grade";
-        btn.disabled = false;
-    } else {
-        btn.innerText = "Saved!";
-        btn.style.backgroundColor = "#137333"; // Change color to green
-        
-        // Optional: Reset button after 2 seconds
-        setTimeout(() => {
+        if(error) {
+            console.error(error);
+            alert("Error saving grade: " + error.message);
             btn.innerText = "Return Grade";
-            btn.style.backgroundColor = "#1a73e8"; // Back to blue
             btn.disabled = false;
-        }, 2000);
+        } else {
+            btn.innerText = "Saved!";
+            btn.style.backgroundColor = "#137333"; 
+            setTimeout(() => {
+                // Refresh modal to move the student to the "Graded" section
+                // We find the 'onclick' attribute of the View Submissions button to get the title again
+                // Or simpler: just close and let user re-open, OR trigger a refresh.
+                // For simplicity here, we just reset the button.
+                btn.innerText = "Return Grade";
+                btn.style.backgroundColor = "#1a73e8"; 
+                btn.disabled = false;
+                
+                // Optional: Close modal so user sees the list update next time
+                // closeGradingModal();
+            }, 1000);
+        }
     }
-}
+
     function closeGradingModal() { document.getElementById('gradingModal').style.display = 'none'; }
 
+    // --- CLASS CREATION & ASSIGNMENT LOGIC ---
     async function createClass() {
         const title = document.getElementById('newClassName').value;
         const section = document.getElementById('newClassSection').value;
         if(!title) return alert("Required");
         
-        // Generate Unique Code
         const code = Math.random().toString(36).substring(2, 9).toUpperCase();
-
-        await supabaseClient.from('classes').insert([{ 
-            teacher_id: currentUser.id, 
-            title, 
-            section,
-            class_code: code 
-        }]);
+        await supabaseClient.from('classes').insert([{ teacher_id: currentUser.id, title, section, class_code: code }]);
         closeAllModals();
         fetchClasses();
     }
@@ -782,72 +595,79 @@ async function saveGrade(subId) {
         finally { btn.innerText = "Generate"; btn.disabled = false; }
     }
 
-    function toggleDropdown() { document.getElementById('createDropdown').style.display = (document.getElementById('createDropdown').style.display === 'block') ? 'none' : 'block'; }
-    function openClassModal() { document.getElementById('createClassModal').style.display = 'flex'; }
-    function openAssignModal() { document.getElementById('createDropdown').style.display='none'; document.getElementById('assignModal').style.display = 'flex'; }
-    function openAiModal() { document.getElementById('createDropdown').style.display='none'; document.getElementById('aiModal').style.display = 'flex'; }
-    function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
-    window.onclick = function(e) { if(e.target.classList.contains('modal-overlay')) closeAllModals(); if (!e.target.matches('.create-btn') && !e.target.closest('.create-btn')) { const dropdown = document.getElementById('createDropdown'); if (dropdown) dropdown.style.display = 'none'; } };
-    
-    async function handleLogout() {
-        if (confirm("Are you sure you want to log out?")) {
-            try {
-                if (supabaseClient.auth) await supabaseClient.auth.signOut();
-                window.location.href = 'teacher_login.php';
-            } catch (err) { console.error("Logout Error:", err); window.location.href = 'teacher_login.php'; }
-        }
+    // --- HELPERS ---
+    function showFile(input, txtId) { 
+        if(input.files[0]) { 
+            document.getElementById(txtId).innerHTML = `<i class="fa-solid fa-file-pdf"></i> <b>${input.files[0].name}</b>`; 
+            document.getElementById(txtId).style.color = '#333'; 
+        } 
     }
-
-    let jitsiApi = null;
-
-    function startMeeting() {
-        const roomName = "TechHub_Room_" + currentClassId + "_" + Math.floor(Math.random() * 1000);
-        const title = document.getElementById('bannerTitle').innerText;
-        
-        document.getElementById('jitsiTitle').innerText = "Virtual Class: " + title;
+    
+    // --- Virtual Class Sync ---
+    async function startMeeting() {
+        await supabaseClient.from('classes').update({ meeting_active: true }).eq('id', currentClassId);
+        const roomName = "TechHub_Room_" + currentClassId;
+        document.getElementById('jitsiTitle').innerText = "Virtual Class: " + document.getElementById('bannerTitle').innerText;
         document.getElementById('jitsiModal').style.display = 'flex';
 
-        const domain = "meet.ffmuc.net"; 
-        
         const options = {
             roomName: roomName,
             width: "100%",
             height: "100%",
             parentNode: document.querySelector('#jitsi-container'),
-            userInfo: {
-                displayName: userFullName 
-            },
-            configOverwrite: {
-                startWithAudioMuted: true,
-                startWithVideoMuted: false,
-                prejoinPageEnabled: false, 
-                disableWelcomePage: true
-            },
-            interfaceConfigOverwrite: {
-                TOOLBAR_BUTTONS: [
-                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                    'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                    'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                    'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                    'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                    'security'
-                ],
-                SHOW_JITSI_WATERMARK: false,
-                SHOW_WATERMARK_FOR_GUESTS: false,
-                DEFAULT_REMOTE_DISPLAY_NAME: 'Student'
-            }
+            userInfo: { displayName: userFullName },
+            configOverwrite: { startWithAudioMuted: true, prejoinPageEnabled: false }
         };
 
         if (jitsiApi) jitsiApi.dispose();
-        jitsiApi = new JitsiMeetExternalAPI(domain, options);
+        jitsiApi = new JitsiMeetExternalAPI("meet.ffmuc.net", options);
+
+        jitsiApi.addEventListener('videoConferenceLeft', () => closeJitsi());
     }
-    function closeJitsi() {
-        if (jitsiApi) {
-            jitsiApi.dispose();
-            jitsiApi = null;
-        }
+
+    async function closeJitsi() {
+        await supabaseClient.from('classes').update({ meeting_active: false }).eq('id', currentClassId);
+        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
         document.getElementById('jitsiModal').style.display = 'none';
-        document.getElementById('jitsi-container').innerHTML = ''; 
+    }
+
+    function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
+    function toggleDropdown() { document.getElementById('createDropdown').style.display = (document.getElementById('createDropdown').style.display === 'block') ? 'none' : 'block'; }
+    function copyCode() { navigator.clipboard.writeText(document.getElementById('bannerCode').innerText); alert("Copied!"); }
+    async function handleLogout() { if(confirm("Log out?")) { await supabaseClient.auth.signOut(); window.location.href = 'teacher_login.php'; } }
+    
+    function switchTab(tab) {
+        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+        document.getElementById('tab-'+tab).classList.add('active');
+        document.querySelectorAll('.active-tab-content').forEach(e => e.style.display = 'none');
+        if(tab === 'stream') document.getElementById('streamSection').style.display = 'block';
+        if(tab === 'classwork') document.getElementById('classworkSection').style.display = 'block';
+        if(tab === 'people') {
+            document.getElementById('peopleSection').style.display = 'block';
+            fetchPeople();
+        }
+    }
+
+    async function fetchPeople() {
+        const teacherArea = document.getElementById('teacherListArea');
+        const studentArea = document.getElementById('studentListArea');
+        const { data: classData } = await supabaseClient.from('classes').select(`teacher_id, teacher:profiles!teacher_id (full_name)`).eq('id', currentClassId).single();
+
+        if (classData) {
+            const tName = Array.isArray(classData.teacher) ? classData.teacher[0]?.full_name : classData.teacher?.full_name;
+            teacherArea.innerHTML = `<h2 style="color:#1a73e8; font-size: 30px; font-weight:400; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px;">Teachers</h2><div style="display:flex; align-items:center; gap:15px; padding: 10px 0;"><div style="width:40px; height:40px; background:#e0e0e0; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-user"></i></div><span style="font-weight:500; font-size: 16px;">${tName || 'Unknown'}</span></div>`;
+        }
+
+        const { data: students } = await supabaseClient.from('enrollments').select(`student:profiles (full_name)`).eq('class_id', currentClassId);
+        let sHtml = `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;"><h2 style="color:#1a73e8; font-size: 30px; font-weight:400; margin:0;">Students</h2><span style="color:#1a73e8; font-weight:500;">${students ? students.length : 0} students</span></div>`;
+
+        if (students && students.length > 0) {
+            students.forEach(item => {
+                const name = (Array.isArray(item.student) ? item.student[0]?.full_name : item.student?.full_name) || "Student";
+                sHtml += `<div style="display:flex; align-items:center; gap:15px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;"><div style="width:35px; height:35px; background:#1967d2; color:white; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:14px;">${name.charAt(0).toUpperCase()}</div><span style="font-weight:500; color:#3c4043;">${name}</span></div>`;
+            });
+        } else { sHtml += `<div style="color:#777; font-style:italic;">No students enrolled yet.</div>`; }
+        studentArea.innerHTML = sHtml;
     }
 </script>
 </body>
