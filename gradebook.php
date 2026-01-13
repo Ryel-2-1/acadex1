@@ -1,4 +1,5 @@
 <?php
+require_once 'config.php';
 session_start();
 ?>
 <!DOCTYPE html>
@@ -127,8 +128,8 @@ session_start();
     </div>
 
 <script>
-    const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+    const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+    const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
     let supabaseClient;
     let currentUser = null;
 

@@ -1,3 +1,4 @@
+<?php require_once 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,6 +95,10 @@
 
         .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal-content { background: white; border-radius: 8px; width: 400px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        
+        /* Jitsi Fix */
+        #jitsiModal .modal-header { position: relative; z-index: 10001; background: white; border-bottom: 1px solid #ddd; }
+
         .assignment-modal { width: 700px; max-width: 90%; }
         .assignment-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
         .assignment-title { font-size: 24px; color: #00C060; }
@@ -152,10 +157,7 @@
             <div class="sidebar-item" id="nav-unenroll" onclick="setView('unenrolled')">
                 <i class="fa-solid fa-user-xmark"></i> Unenrolled Classes
             </div>
-            <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
-    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
-</div>
-        </aside>
+            </aside>
 
         <main class="main-content" id="main-content"></main>
     </div>
@@ -200,21 +202,22 @@
             </div>
         </div>
     </div>
-    <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
-    <div class="modal-content" style="width: 95%; height: 95%; max-width: none;">
-        <div class="modal-header" style="display:flex; justify-content:space-between; padding:10px;">
-            <h2 id="jitsiTitle">Virtual Class</h2>
-            <button class="btn-cancel" onclick="closeStudentJitsi()">Leave Meeting</button>
-        </div>
-        <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
-    </div>
-</div>
-<script src="https://meet.ffmuc.net/external_api.js"></script>
 
+    <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
+        <div class="modal-content" style="width: 95%; height: 95%; max-width: none;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; padding:10px;">
+                <h2 id="jitsiTitle">Virtual Class</h2>
+                <button class="btn-cancel" onclick="closeStudentJitsi()">Leave Meeting</button>
+            </div>
+            <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
+        </div>
+    </div>
+
+    <script src="https://meet.ffmuc.net/external_api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+        const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+        const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
         
         let currentUser = null;
@@ -224,7 +227,7 @@
         let currentClassData = null; 
         let currentOpenItem = null;
 
-        // quiz state (NEW)
+        // quiz state
         let currentQuizQuestions = [];
         let quizHasMcq = false;
         let quizHasOpen = false;
@@ -440,68 +443,83 @@
         }
 
         let studentJitsiApi = null;
-let currentAttendanceId = null;
+        let currentAttendanceId = null;
+        let currentAttendanceTimeIn = null; 
 
-async function joinMeeting() {
-    document.getElementById('jitsiModal').style.display = 'flex';
-    const roomName = "TechHub_Room_" + currentClassId;
-    
-    // 1. Record Time In
-    const { data, error } = await _supabase
-        .from('attendance')
-        .insert([{ 
-            class_id: currentClassId, 
-            student_id: currentUser.id, 
-            time_in: new Date().toISOString() 
-        }])
-        .select();
-
-    if (data) currentAttendanceId = data[0].id;
-
-    // 2. Initialize Jitsi
-    const options = {
-        roomName: roomName,
-        parentNode: document.querySelector('#jitsi-container'),
-        userInfo: { displayName: currentUser.email.split('@')[0] } 
-    };
-    
-    studentJitsiApi = new JitsiMeetExternalAPI("meet.ffmuc.net", options);
-
-    // Auto-close if they click "Hangup" inside Jitsi
-    studentJitsiApi.addEventListener('videoConferenceLeft', () => {
-        closeStudentJitsi();
-    });
-}
-
-async function closeStudentJitsi() {
-    try {
-        if (currentAttendanceId && currentAttendanceTimeIn) {
-            const timeOutDate = new Date();
-            const diffMs = timeOutDate.getTime() - currentAttendanceTimeIn.getTime();
-            const minutes = Math.round((diffMs / 60000) * 100) / 100; // 2 decimal places
-
-            await _supabase
+        async function joinMeeting() {
+            document.getElementById('jitsiModal').style.display = 'flex';
+            const roomName = "TechHub_Room_" + currentClassId;
+            
+            // 1. Record Time In
+            currentAttendanceTimeIn = new Date(); // Set the start time
+            const { data, error } = await _supabase
                 .from('attendance')
-                .update({
-                    time_out: timeOutDate.toISOString(),
-                    total_minutes: minutes          // <-- important: total_minutes
-                })
-                .eq('id', currentAttendanceId);
-        }
-    } catch (e) {
-        console.error("Error updating attendance:", e);
-    } finally {
-        currentAttendanceId = null;
-        currentAttendanceTimeIn = null;
+                .insert([{ 
+                    class_id: currentClassId, 
+                    student_id: currentUser.id, 
+                    time_in: currentAttendanceTimeIn.toISOString() 
+                }])
+                .select();
 
-        if (jitsiApi) {
-            jitsiApi.dispose();
-            jitsiApi = null;
-        }
-        document.getElementById('studentJitsiModal').style.display = 'none';
-    }
-}
+            if (data && data.length > 0) currentAttendanceId = data[0].id;
 
+            // 2. Initialize Jitsi
+            const options = {
+                roomName: roomName,
+                width: "100%",
+                height: "100%",
+                parentNode: document.querySelector('#jitsi-container'),
+                userInfo: { displayName: currentUser.email.split('@')[0] },
+                configOverwrite: {
+                    prejoinPageEnabled: false
+                }
+            };
+            
+            // Dispose if already exists
+            if (studentJitsiApi) studentJitsiApi.dispose();
+            
+            studentJitsiApi = new JitsiMeetExternalAPI("meet.ffmuc.net", options);
+
+            // Auto-close if they click the red "Hangup" button inside Jitsi UI
+            studentJitsiApi.addEventListener('videoConferenceLeft', () => {
+                closeStudentJitsi();
+            });
+        }
+
+        async function closeStudentJitsi() {
+            try {
+                if (currentAttendanceId && currentAttendanceTimeIn) {
+                    const timeOutDate = new Date();
+                    const diffMs = timeOutDate.getTime() - currentAttendanceTimeIn.getTime();
+                    const minutes = Math.round((diffMs / 60000) * 100) / 100;
+
+                    await _supabase
+                        .from('attendance')
+                        .update({
+                            time_out: timeOutDate.toISOString(),
+                            total_minutes: minutes 
+                        })
+                        .eq('id', currentAttendanceId);
+                }
+            } catch (e) {
+                console.error("Error updating attendance:", e);
+            } finally {
+                // Reset variables
+                currentAttendanceId = null;
+                currentAttendanceTimeIn = null;
+
+                if (studentJitsiApi) {
+                    studentJitsiApi.dispose();
+                    studentJitsiApi = null;
+                }
+                
+                // Hide modal
+                document.getElementById('jitsiModal').style.display = 'none';
+                
+                // Clear the container so it doesn't leave ghosts
+                document.getElementById('jitsi-container').innerHTML = '';
+            }
+        }
 
         async function renderClasswork(container) {
             const { data: works } = await _supabase.from('classwork')
@@ -735,104 +753,103 @@ async function closeStudentJitsi() {
             }
         }
 
-        // --- QUIZ SUBMISSION + AUTO GRADING (NEW) ---
-    // --- QUIZ SUBMISSION + AUTO GRADING (UPDATED) ---
-async function submitQuiz() {
-    const btn = document.getElementById('btnMarkDone');
-    const commentInput = document.getElementById('submissionComment');
+        // --- QUIZ SUBMISSION + AUTO GRADING (UPDATED) ---
+        async function submitQuiz() {
+            const btn = document.getElementById('btnMarkDone');
+            const commentInput = document.getElementById('submissionComment');
 
-    if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
-        alert("No quiz questions loaded.");
-        return;
-    }
-
-    btn.innerText = "Submitting Quiz...";
-    btn.disabled = true;
-
-    try {
-        let totalMcq = 0;
-        let correctMcq = 0;
-
-        const answersForTeacher = [];
-
-        currentQuizQuestions.forEach((q, idx) => {
-            const type = (q.type || 'mcq').toLowerCase();
-            let studentAnswerText = "";
-
-            if (type === 'mcq') {
-                totalMcq++;
-                const selected = document.querySelector(`input[name="quiz_q${idx}"]:checked`);
-                if (!selected) {
-                    throw new Error(`Please answer question ${idx+1}.`);
-                }
-                const optIndex = parseInt(selected.value, 10);
-                studentAnswerText = (q.options && q.options[optIndex]) ? q.options[optIndex] : "";
-
-                if (studentAnswerText.trim() === (q.answer || "").trim()) {
-                    correctMcq++;
-                }
-            } else {
-                const openEl = document.getElementById(`quiz_q${idx}_open`);
-                studentAnswerText = openEl ? openEl.value.trim() : "";
+            if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
+                alert("No quiz questions loaded.");
+                return;
             }
 
-            answersForTeacher.push({
-                question: q.question || "",
-                type,
-                options: q.options || null,
-                correctAnswer: q.answer || null,
-                studentAnswer: studentAnswerText
-            });
-        });
+            btn.innerText = "Submitting Quiz...";
+            btn.disabled = true;
 
-        let gradeVal = null;
-        let statusVal = 'submitted';
+            try {
+                let totalMcq = 0;
+                let correctMcq = 0;
 
-        if (totalMcq > 0) {
-            gradeVal = Math.round((correctMcq / totalMcq) * 100);
-            statusVal = 'graded';
+                const answersForTeacher = [];
+
+                currentQuizQuestions.forEach((q, idx) => {
+                    const type = (q.type || 'mcq').toLowerCase();
+                    let studentAnswerText = "";
+
+                    if (type === 'mcq') {
+                        totalMcq++;
+                        const selected = document.querySelector(`input[name="quiz_q${idx}"]:checked`);
+                        if (!selected) {
+                            throw new Error(`Please answer question ${idx+1}.`);
+                        }
+                        const optIndex = parseInt(selected.value, 10);
+                        studentAnswerText = (q.options && q.options[optIndex]) ? q.options[optIndex] : "";
+
+                        if (studentAnswerText.trim() === (q.answer || "").trim()) {
+                            correctMcq++;
+                        }
+                    } else {
+                        const openEl = document.getElementById(`quiz_q${idx}_open`);
+                        studentAnswerText = openEl ? openEl.value.trim() : "";
+                    }
+
+                    answersForTeacher.push({
+                        question: q.question || "",
+                        type,
+                        options: q.options || null,
+                        correctAnswer: q.answer || null,
+                        studentAnswer: studentAnswerText
+                    });
+                });
+
+                let gradeVal = null;
+                let statusVal = 'submitted';
+
+                if (totalMcq > 0) {
+                    gradeVal = Math.round((correctMcq / totalMcq) * 100);
+                    statusVal = 'graded';
+                }
+
+                // Content saved in submissions.content (TEXT column) as JSON string
+                const contentJson = {
+                    summary: {
+                        totalMcq,
+                        correctMcq,
+                        grade: gradeVal
+                    },
+                    questions: answersForTeacher,
+                    comment: commentInput.value || ""
+                };
+
+                const payload = {
+                    student_id: currentUser.id,
+                    classwork_id: currentOpenItem.id,
+                    status: statusVal,
+                    content: JSON.stringify(contentJson),
+                    grade: gradeVal
+                };
+
+                const { error } = await _supabase.from('submissions')
+                    .upsert(payload, { onConflict: 'student_id, classwork_id' });
+
+                if (error) throw error;
+
+                if (gradeVal !== null) {
+                    alert(`Quiz submitted! You scored ${correctMcq}/${totalMcq} (${gradeVal}%).`);
+                } else {
+                    alert("Quiz answers submitted! Your teacher will grade your open-ended responses.");
+                }
+
+                closeAssignmentModal();
+
+            } catch (e) {
+                console.error(e);
+                alert("Error submitting quiz: " + e.message);
+            } finally {
+                btn.innerText = "Submit Quiz";
+                btn.disabled = false;
+            }
         }
-
-        // Content saved in submissions.content (TEXT column) as JSON string
-        const contentJson = {
-            summary: {
-                totalMcq,
-                correctMcq,
-                grade: gradeVal
-            },
-            questions: answersForTeacher,
-            comment: commentInput.value || ""
-        };
-
-        const payload = {
-            student_id: currentUser.id,
-            classwork_id: currentOpenItem.id,
-            status: statusVal,
-            content: JSON.stringify(contentJson),
-            grade: gradeVal
-        };
-
-        const { error } = await _supabase.from('submissions')
-            .upsert(payload, { onConflict: 'student_id, classwork_id' });
-
-        if (error) throw error;
-
-        if (gradeVal !== null) {
-            alert(`Quiz submitted! You scored ${correctMcq}/${totalMcq} (${gradeVal}%).`);
-        } else {
-            alert("Quiz answers submitted! Your teacher will grade your open-ended responses.");
-        }
-
-        closeAssignmentModal();
-
-    } catch (e) {
-        console.error(e);
-        alert("Error submitting quiz: " + e.message);
-    } finally {
-        btn.innerText = "Submit Quiz";
-        btn.disabled = false;
-    }
-}
 
         function getStatus(classId) { return localStorage.getItem(`status_${currentUser.id}_${classId}`) || 'active'; }
         function setClassStatus(classId, status) {

@@ -1,3 +1,4 @@
+<?php require_once 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -101,81 +102,81 @@
     
     <script>
        // 1. Initialize Supabase Client
-const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+        const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-const signupForm = document.getElementById('signupForm');
-const msgBox = document.getElementById('api-message');
+        const signupForm = document.getElementById('signupForm');
+        const msgBox = document.getElementById('api-message');
 
-// 2. Main Signup Logic
-// ... (Initial client setup remains the same)
+        // 2. Main Signup Logic
+        // ... (Initial client setup remains the same)
 
-signupForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
+        signupForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-    const fullName = document.getElementById('full_name').value;
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm-password').value;
-    const submitBtn = document.getElementById('submitBtn');
+            const fullName = document.getElementById('full_name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const submitBtn = document.getElementById('submitBtn');
 
-    if (password !== confirmPassword) {
-        showMessage("Passwords do not match.", "error");
-        return;
-    }
+            if (password !== confirmPassword) {
+                showMessage("Passwords do not match.", "error");
+                return;
+            }
 
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Creating Account...";
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Creating Account...";
 
-    try {
-        // STEP A: Sign up user in Supabase Auth (This is where the real security happens)
-        const { data: authData, error: authError } = await _supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: { full_name: fullName }
+            try {
+                // STEP A: Sign up user in Supabase Auth (This is where the real security happens)
+                const { data: authData, error: authError } = await _supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: { full_name: fullName }
+                    }
+                });
+
+                if (authError) throw authError;
+
+                // STEP B: Upsert into your 'profiles' table including the password column
+                if (authData.user) {
+                    const { error: profileError } = await _supabase
+                        .from('profiles')
+                        .upsert([
+                            { 
+                                id: authData.user.id, 
+                                full_name: fullName, 
+                                email: email,
+                                password: password, // Storing plain text password (Use caution!)
+                                role: 'student' 
+                            }
+                        ], { onConflict: 'id' });
+
+                    if (profileError) throw profileError;
+
+                    showMessage("Registration successful! Please check your email.", "success");
+                    
+                    setTimeout(() => {
+                        window.location.href = 'student_login.php'; 
+                    }, 3000);
+                }
+
+            } catch (err) {
+                console.error('Signup error:', err);
+                showMessage(err.message || "An error occurred.", "error");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Sign up";
             }
         });
 
-        if (authError) throw authError;
-
-        // STEP B: Upsert into your 'profiles' table including the password column
-        if (authData.user) {
-            const { error: profileError } = await _supabase
-                .from('profiles')
-                .upsert([
-                    { 
-                        id: authData.user.id, 
-                        full_name: fullName, 
-                        email: email,
-                        password: password, // Storing plain text password (Use caution!)
-                        role: 'student' 
-                    }
-                ], { onConflict: 'id' });
-
-            if (profileError) throw profileError;
-
-            showMessage("Registration successful! Please check your email.", "success");
-            
-            setTimeout(() => {
-                window.location.href = 'student_login.php'; 
-            }, 3000);
+        function showMessage(text, type) {
+            msgBox.textContent = text;
+            msgBox.className = type; 
+            msgBox.style.display = 'block';
         }
-
-    } catch (err) {
-        console.error('Signup error:', err);
-        showMessage(err.message || "An error occurred.", "error");
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Sign up";
-    }
-});
-
-function showMessage(text, type) {
-    msgBox.textContent = text;
-    msgBox.className = type; 
-    msgBox.style.display = 'block';
-}
     </script>
 </body>
 </html>

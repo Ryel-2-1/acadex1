@@ -1,4 +1,5 @@
 <?php
+require_once 'config.php';
 session_start();
 ?>
 <!DOCTYPE html>
@@ -259,7 +260,6 @@ session_start();
     </main>
 </div>
 
-<!-- Create Class Modal -->
 <div id="createClassModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header"><h2>Create New Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
@@ -271,7 +271,6 @@ session_start();
     </div>
 </div>
 
-<!-- New Assignment Modal -->
 <div id="assignModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header"><h2>New Assignment</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
@@ -284,7 +283,6 @@ session_start();
     </div>
 </div>
 
-<!-- AI Quiz Generator Modal (updated with question type) -->
 <div id="aiModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header"><h2>Generate Quiz</h2><span style="cursor:pointer" onclick="closeAllModals()">&times;</span></div>
@@ -314,7 +312,6 @@ session_start();
     </div>
 </div>
 
-<!-- Jitsi Modal -->
 <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
     <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
         <div class="modal-header">
@@ -325,7 +322,6 @@ session_start();
     </div>
 </div>
 
-<!-- Grading Modal -->
 <div id="gradingModal" class="modal-overlay">
     <div class="modal-content grading-modal">
         <div class="modal-header">
@@ -341,7 +337,6 @@ session_start();
     </div>
 </div>
 
-<!-- Quiz Editor Modal (NEW) -->
 <div id="quizEditorModal" class="modal-overlay">
     <div class="modal-content grading-modal">
         <div class="modal-header">
@@ -349,8 +344,7 @@ session_start();
             <span style="cursor:pointer" onclick="closeQuizEditor()">&times;</span>
         </div>
         <div class="modal-body" id="quizEditorList" style="max-height:60vh; overflow-y:auto;">
-            <!-- dynamic -->
-        </div>
+            </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeQuizEditor()">Cancel</button>
             <button class="btn-go" onclick="saveEditedQuiz()">Save Quiz</button>
@@ -359,8 +353,8 @@ session_start();
 </div>
 
 <script>
-    const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+    const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+    const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
     let supabaseClient;
     
     let currentUser = null; 

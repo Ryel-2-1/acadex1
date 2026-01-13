@@ -1,3 +1,4 @@
+<?php require_once 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,8 +96,8 @@
 
     <script>
         // 1. Initialize Supabase
-        const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+        const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+        const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         const signupForm = document.getElementById('teacherSignupForm');

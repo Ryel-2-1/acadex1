@@ -1,3 +1,4 @@
+<?php require_once 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Container for error messages */
         #login-error {
             display: none;
             background-color: #ffebee;
@@ -64,14 +64,12 @@
         </div>
     </div>
 
-   <div id="login-error"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-    // 1. Initialize Supabase
-    const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+    // 1. Initialize Supabase with .env credentials
+    const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
+    const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
     const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     const loginForm = document.getElementById('loginForm');
@@ -82,7 +80,6 @@
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Reset UI
         errorBox.style.display = 'none';
         errorBox.innerHTML = ''; 
         loginBtn.disabled = true;
@@ -92,20 +89,16 @@
         const password = document.getElementById('password').value;
 
         try {
-            // STEP A: Authenticate with Supabase
             const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
 
-            // Handle Authentication Errors
             if (authError) {
-                // Specific check for unconfirmed email
                 if (authError.message.includes("Email not confirmed")) {
                     errorBox.innerHTML = `Email not confirmed. <a href="#" id="resend-link" style="color: #c62828; font-weight: bold; text-decoration: underline;">Resend verification?</a>`;
                     errorBox.style.display = 'block';
                     
-                    // Add listener to the dynamic resend link
                     document.getElementById('resend-link').addEventListener('click', async (linkEvent) => {
                         linkEvent.preventDefault();
                         const { error: resendError } = await _supabase.auth.resend({
@@ -118,10 +111,9 @@
                 } else {
                     throw authError;
                 }
-                return; // Stop execution if email is unconfirmed
+                return;
             }
 
-            // STEP B: Role Check (Fetch from your 'profiles' table)
             const { data: profile, error: profileError } = await _supabase
                 .from('profiles')
                 .select('role')
@@ -130,13 +122,11 @@
 
             if (profileError) throw profileError;
 
-            // STEP C: Verify Role is 'student'
             if (profile.role !== 'student') {
-                await _supabase.auth.signOut(); // Log them out immediately
+                await _supabase.auth.signOut(); 
                 throw new Error("Access Denied: This account is not registered as a student.");
             }
 
-            // SUCCESS: Redirect to dashboard
             window.location.href = 'student.php';
 
         } catch (err) {
