@@ -665,88 +665,103 @@
         }
 
         // --- QUIZ SUBMISSION + AUTO GRADING (NEW) ---
-        async function submitQuiz() {
-            const btn = document.getElementById('btnMarkDone');
-            const commentInput = document.getElementById('submissionComment');
+    // --- QUIZ SUBMISSION + AUTO GRADING (UPDATED) ---
+async function submitQuiz() {
+    const btn = document.getElementById('btnMarkDone');
+    const commentInput = document.getElementById('submissionComment');
 
-            if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
-                alert("No quiz questions loaded.");
-                return;
+    if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
+        alert("No quiz questions loaded.");
+        return;
+    }
+
+    btn.innerText = "Submitting Quiz...";
+    btn.disabled = true;
+
+    try {
+        let totalMcq = 0;
+        let correctMcq = 0;
+
+        const answersForTeacher = [];
+
+        currentQuizQuestions.forEach((q, idx) => {
+            const type = (q.type || 'mcq').toLowerCase();
+            let studentAnswerText = "";
+
+            if (type === 'mcq') {
+                totalMcq++;
+                const selected = document.querySelector(`input[name="quiz_q${idx}"]:checked`);
+                if (!selected) {
+                    throw new Error(`Please answer question ${idx+1}.`);
+                }
+                const optIndex = parseInt(selected.value, 10);
+                studentAnswerText = (q.options && q.options[optIndex]) ? q.options[optIndex] : "";
+
+                if (studentAnswerText.trim() === (q.answer || "").trim()) {
+                    correctMcq++;
+                }
+            } else {
+                const openEl = document.getElementById(`quiz_q${idx}_open`);
+                studentAnswerText = openEl ? openEl.value.trim() : "";
             }
 
-            btn.innerText = "Submitting Quiz...";
-            btn.disabled = true;
+            answersForTeacher.push({
+                question: q.question || "",
+                type,
+                options: q.options || null,
+                correctAnswer: q.answer || null,
+                studentAnswer: studentAnswerText
+            });
+        });
 
-            try {
-                let totalMcq = 0;
-                let correctMcq = 0;
-                let openAnswersSummary = "";
+        let gradeVal = null;
+        let statusVal = 'submitted';
 
-                currentQuizQuestions.forEach((q, idx) => {
-                    const type = (q.type || 'mcq').toLowerCase();
-
-                    if (type === 'mcq') {
-                        totalMcq++;
-                        const selected = document.querySelector(`input[name="quiz_q${idx}"]:checked`);
-                        if (!selected) {
-                            throw new Error(`Please answer question ${idx+1}.`);
-                        }
-                        const optIndex = parseInt(selected.value, 10);
-                        const chosenText = (q.options && q.options[optIndex]) ? q.options[optIndex] : "";
-                        if (chosenText.trim() === (q.answer || "").trim()) {
-                            correctMcq++;
-                        }
-                    } else {
-                        const openEl = document.getElementById(`quiz_q${idx}_open`);
-                        const ans = openEl ? openEl.value.trim() : '';
-                        openAnswersSummary += `Q${idx+1} (open): ${ans}\n`;
-                    }
-                });
-
-                let gradeVal = null;
-                let statusVal = 'submitted';
-                let contentVal = commentInput.value || '';
-
-                if (totalMcq > 0) {
-                    gradeVal = Math.round((correctMcq / totalMcq) * 100);
-                    statusVal = 'graded';
-                    const scoreSummary = `Auto-graded quiz: ${correctMcq}/${totalMcq} (${gradeVal}%)`;
-                    contentVal = contentVal ? (scoreSummary + "\n\n" + contentVal) : scoreSummary;
-                }
-
-                if (openAnswersSummary.trim() !== "") {
-                    contentVal += (contentVal ? "\n\n" : "") + "Open-ended answers:\n" + openAnswersSummary;
-                }
-
-                const payload = {
-                    student_id: currentUser.id,
-                    classwork_id: currentOpenItem.id,
-                    status: statusVal,
-                    content: contentVal,
-                    grade: gradeVal
-                };
-
-                const { error } = await _supabase.from('submissions')
-                    .upsert(payload, { onConflict: 'student_id, classwork_id' });
-
-                if (error) throw error;
-
-                if (gradeVal !== null) {
-                    alert(`Quiz submitted! You scored ${correctMcq}/${totalMcq} (${gradeVal}%).`);
-                } else {
-                    alert("Quiz answers submitted! Your teacher will grade your open-ended responses.");
-                }
-
-                closeAssignmentModal();
-
-            } catch (e) {
-                console.error(e);
-                alert("Error submitting quiz: " + e.message);
-            } finally {
-                btn.innerText = "Submit Quiz";
-                btn.disabled = false;
-            }
+        if (totalMcq > 0) {
+            gradeVal = Math.round((correctMcq / totalMcq) * 100);
+            statusVal = 'graded';
         }
+
+        // Content saved in submissions.content (TEXT column) as JSON string
+        const contentJson = {
+            summary: {
+                totalMcq,
+                correctMcq,
+                grade: gradeVal
+            },
+            questions: answersForTeacher,
+            comment: commentInput.value || ""
+        };
+
+        const payload = {
+            student_id: currentUser.id,
+            classwork_id: currentOpenItem.id,
+            status: statusVal,
+            content: JSON.stringify(contentJson),
+            grade: gradeVal
+        };
+
+        const { error } = await _supabase.from('submissions')
+            .upsert(payload, { onConflict: 'student_id, classwork_id' });
+
+        if (error) throw error;
+
+        if (gradeVal !== null) {
+            alert(`Quiz submitted! You scored ${correctMcq}/${totalMcq} (${gradeVal}%).`);
+        } else {
+            alert("Quiz answers submitted! Your teacher will grade your open-ended responses.");
+        }
+
+        closeAssignmentModal();
+
+    } catch (e) {
+        console.error(e);
+        alert("Error submitting quiz: " + e.message);
+    } finally {
+        btn.innerText = "Submit Quiz";
+        btn.disabled = false;
+    }
+}
 
         function getStatus(classId) { return localStorage.getItem(`status_${currentUser.id}_${classId}`) || 'active'; }
         function setClassStatus(classId, status) {

@@ -538,36 +538,87 @@ session_start();
         }
     }
 
-    function createSubmissionCard(sub) {
-        const name = sub.student ? sub.student.full_name : "Unknown Student";
-        const email = sub.student ? sub.student.email : "";
-        const date = new Date(sub.created_at).toLocaleString();
-        const grade = sub.grade || "";
+ function createSubmissionCard(sub) {
+    const name = sub.student ? sub.student.full_name : "Unknown Student";
+    const email = sub.student ? sub.student.email : "";
+    const date = new Date(sub.created_at).toLocaleString();
+    const grade = sub.grade || "";
 
-        return `
-        <div class="submission-row" style="border-left: 4px solid ${sub.status === 'graded' ? '#137333' : '#e37400'};">
-            <div style="display:flex; justify-content:space-between;">
-                <div>
-                    <div style="font-weight:600; color:#3c4043;">${name}</div>
-                    <div class="sub-meta">${email} • ${date}</div>
-                </div>
-                <div style="font-weight:bold; font-size:12px; color:${sub.status === 'graded' ? '#137333' : '#e37400'};">
-                    ${sub.status === 'graded' ? 'DONE' : 'NEEDS REVIEW'}
-                </div>
-            </div>
+    let detailsHtml = "";
 
-            ${ sub.content ? `<div class="student-comment">"${sub.content}"</div>` : '' }
-            
-            ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
+    if (sub.content) {
+        let parsed = null;
+        try {
+            parsed = JSON.parse(sub.content);
+        } catch (e) {
+            parsed = null;
+        }
 
-            <div class="grade-box">
-                <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
-                <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">
-                    ${sub.status === 'graded' ? 'Update Grade' : 'Return Grade'}
-                </button>
-            </div>
-        </div>`;
+        // If content is JSON from a quiz
+        if (parsed && Array.isArray(parsed.questions)) {
+            const summary = parsed.summary || {};
+            const comment = parsed.comment || "";
+
+            detailsHtml += `<div class="student-comment">`;
+
+            if (summary && summary.totalMcq != null) {
+                const total = summary.totalMcq;
+                const correct = summary.correctMcq;
+                const g = summary.grade;
+                detailsHtml += `<div><b>Score:</b> ${correct}/${total} (${g ?? 0}%)</div>`;
+            } else if (summary && summary.grade != null) {
+                detailsHtml += `<div><b>Grade:</b> ${summary.grade}</div>`;
+            }
+
+            parsed.questions.forEach((q, idx) => {
+                const qText = escapeHtml(q.question || "");
+                const stud = escapeHtml(q.studentAnswer || "");
+                const corr = escapeHtml(q.correctAnswer || "");
+
+                detailsHtml += `
+                    <div style="margin-top:8px;">
+                        <div><b>Q${idx+1}.</b> ${qText}</div>
+                        <div><b>Your answer:</b> ${stud || '<i>no answer</i>'}</div>
+                        ${corr ? `<div><b>Correct:</b> ${corr}</div>` : ''}
+                    </div>`;
+            });
+
+            if (comment) {
+                detailsHtml += `<div style="margin-top:8px;"><b>Student comment:</b> ${escapeHtml(comment)}</div>`;
+            }
+
+            detailsHtml += `</div>`;
+        } else {
+            // Old / non-quiz submissions – just show the text
+            detailsHtml = `<div class="student-comment">${escapeHtml(sub.content).replace(/\n/g, '<br>')}</div>`;
+        }
     }
+
+    return `
+    <div class="submission-row" style="border-left: 4px solid ${sub.status === 'graded' ? '#137333' : '#e37400'};">
+        <div style="display:flex; justify-content:space-between;">
+            <div>
+                <div style="font-weight:600; color:#3c4043;">${name}</div>
+                <div class="sub-meta">${email} • ${date}</div>
+            </div>
+            <div style="font-weight:bold; font-size:12px; color:${sub.status === 'graded' ? '#137333' : '#e37400'};">
+                ${sub.status === 'graded' ? 'DONE' : 'NEEDS REVIEW'}
+            </div>
+        </div>
+
+        ${detailsHtml}
+        
+        ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
+
+        <div class="grade-box">
+            <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
+            <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">
+                ${sub.status === 'graded' ? 'Update Grade' : 'Return Grade'}
+            </button>
+        </div>
+    </div>`;
+}
+
 
     async function saveGrade(subId) {
         const val = document.getElementById('grade-'+subId).value;
@@ -1005,6 +1056,13 @@ session_start();
         const h2 = (h1 + 40 + (hash % 80)) % 360;
         return `linear-gradient(135deg, hsl(${h1},70%,60%), hsl(${h2},70%,48%))`;
     }
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 </script>
 </body>
 </html>
