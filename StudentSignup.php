@@ -237,95 +237,68 @@
         }
 
         signupForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+    e.preventDefault();
 
-            const fullName        = document.getElementById('full_name').value.trim();
-            const email           = document.getElementById('email').value.trim();
-            const password        = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+    const fullName = document.getElementById('full_name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
 
-            msgBox.style.display = 'none';
+    msgBox.style.display = 'none';
 
-            if (!fullName || !email || !password || !confirmPassword) {
-                showMessage("Please fill in all fields.", "error");
-                return;
-            }
+    if (password !== confirmPassword) {
+        showMessage("Passwords do not match.", "error");
+        return;
+    }
 
-            if (password !== confirmPassword) {
-                showMessage("Passwords do not match.", "error");
-                return;
-            }
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Creating Account...";
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Creating Account...";
-
-            try {
-                // STEP A: Create user in Supabase Auth
-                const { data: authData, error: authError } = await _supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        data: { full_name: fullName }
-                    }
-                });
-
-                if (authError) {
-                    // nicer message when email already in use
-                    if (authError.message && authError.message.toLowerCase().includes("already registered")) {
-                        throw new Error("This email is already registered. Please log in instead.");
-                    }
-                    throw authError;
-                }
-
-                if (!authData || !authData.user) {
-                    throw new Error("Sign up failed – no user returned.");
-                }
-
-                const user = authData.user;
-
-                // STEP B: Check if profile already exists for this auth user
-                const { error: profileError } = await _supabase
-  .from('profiles')
-  .upsert(
-    {
-      id: user.id,          // must match auth.users.id
-      full_name: fullName,
-      email: email,
-      role: 'student'
-    },
-    { onConflict: 'id' }    // if id already exists, UPDATE instead of error
-  );
-
-                // Only INSERT if there is no row yet
-                if (!existingProfile) {
-                    const { error: profileError } = await _supabase
-                        .from('profiles')
-                        .insert({
-                            id: user.id,          // must match auth.users.id
-                            full_name: fullName,
-                            email: email,
-                            role: 'student'
-                        });
-
-                    if (profileError) {
-  console.error("Profile upsert error:", profileError);
-  throw profileError;
-}
-                }
-
-                showMessage("Registration successful! Please check your email and then log in.", "success");
-
-                setTimeout(() => {
-                    window.location.href = 'student_login.php';
-                }, 2500);
-
-            } catch (err) {
-                console.error('Signup error:', err);
-                showMessage(err.message || "An error occurred while signing up.", "error");
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Sign up";
+    try {
+        // 1. Create Supabase Auth user
+        const { data: authData, error: authError } = await _supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: { full_name: fullName }
             }
         });
+
+        if (authError) {
+            if (authError.message.includes("already registered")) {
+                showMessage("Email already registered. Please login instead.", "error");
+            } else {
+                showMessage(authError.message, "error");
+            }
+            throw authError;
+        }
+
+        const user = authData.user;
+
+        // 2. Insert profile entry
+        const { error: profileError } = await _supabase.from('profiles').insert({
+            id: user.id,
+            full_name: fullName,
+            email: email,
+            role: "student"
+        });
+
+        if (profileError) throw profileError;
+
+        showMessage("Registered successfully! Please check your email then login.", "success");
+
+        setTimeout(() => {
+            window.location.href = "student_login.php";
+        }, 2000);
+
+    } catch (err) {
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Sign up";
+    }
+});
+
     </script>
 </body>
 </html>
