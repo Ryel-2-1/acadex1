@@ -168,6 +168,10 @@ session_start();
             <div class="sidebar-item active" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
             <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
             <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
+        
+        <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
+    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
+</div>
         </div>
     </aside>
 
@@ -234,6 +238,24 @@ session_start();
                 <div id="studentListArea" style="margin-top: 30px;"></div>
             </div>
         </div>
+        <div id="attendanceSection" class="active-tab-content" style="display:none;">
+    <div class="action-header">
+        <h2>Attendance Report</h2>
+        <button class="btn-go" onclick="fetchAttendance()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+    </div>
+    <table id="attendanceTable" style="width:100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+        <thead>
+            <tr style="background: #f8f9fa; border-bottom: 2px solid #eee; text-align: left;">
+                <th style="padding: 15px;">Student Name</th>
+                <th style="padding: 15px;">Time In</th>
+                <th style="padding: 15px;">Time Out</th>
+                <th style="padding: 15px;">Duration</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceBody">
+            </tbody>
+    </table>
+</div>
     </main>
 </div>
 
@@ -975,11 +997,22 @@ session_start();
     }
 
     async function closeJitsi() {
-        await supabaseClient.from('classes').update({ meeting_active: false }).eq('id', currentClassId);
-        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
-        document.getElementById('jitsiModal').style.display = 'none';
+    // 1. End meeting status
+    await supabaseClient.from('classes').update({ meeting_active: false }).eq('id', currentClassId);
+
+    // 2. Log Teacher Time Out
+    if (window.currentAttendanceId) {
+        const timeOut = new Date();
+        await supabaseClient
+            .from('attendance')
+            .update({ time_out: timeOut.toISOString() })
+            .eq('id', window.currentAttendanceId);
+        window.currentAttendanceId = null;
     }
 
+    if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
+    document.getElementById('jitsiModal').style.display = 'none';
+}
     function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
     function toggleDropdown() { document.getElementById('createDropdown').style.display = (document.getElementById('createDropdown').style.display === 'block') ? 'none' : 'block'; }
     function copyCode() { navigator.clipboard.writeText(document.getElementById('bannerCode').innerText); alert("Copied!"); }
@@ -1062,7 +1095,58 @@ function escapeHtml(text) {
     const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
     return text.replace(/[&<>"']/g, m => map[m]);
 }
+async function fetchAttendance() {
+    const tbody = document.getElementById('attendanceBody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading attendance...</td></tr>';
 
+    // Fetch from the View we created in Step 1
+    const { data, error } = await supabaseClient
+        .from('class_attendance_summary')
+        .select('*')
+        .eq('class_id', currentClassId)
+        .order('time_in', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No attendance records found.</td></tr>';
+        return;
+    }
+
+    data.forEach(record => {
+        const timeIn = new Date(record.time_in).toLocaleString();
+        const timeOut = record.time_out ? new Date(record.time_out).toLocaleString() : '<span style="color:green;">Still in Meeting</span>';
+        const duration = record.duration_minutes ? `${record.duration_minutes} mins` : '--';
+
+        const row = `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 15px;">${record.student_name}</td>
+                <td style="padding: 15px;">${timeIn}</td>
+                <td style="padding: 15px;">${timeOut}</td>
+                <td style="padding: 15px; font-weight: bold;">${duration}</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+    });
+}
+function switchTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.active-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+
+    // Show selected
+    document.getElementById(tabName + 'Section').style.display = 'block';
+    document.getElementById('tab-' + tabName).classList.add('active');
+
+    if (tabName === 'attendance') {
+        fetchAttendance();
+    }
+}
 </script>
 </body>
 </html>

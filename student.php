@@ -152,6 +152,9 @@
             <div class="sidebar-item" id="nav-unenroll" onclick="setView('unenrolled')">
                 <i class="fa-solid fa-user-xmark"></i> Unenrolled Classes
             </div>
+            <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
+    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
+</div>
         </aside>
 
         <main class="main-content" id="main-content"></main>
@@ -197,6 +200,16 @@
             </div>
         </div>
     </div>
+    <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
+    <div class="modal-content" style="width: 95%; height: 95%; max-width: none;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; padding:10px;">
+            <h2 id="jitsiTitle">Virtual Class</h2>
+            <button class="btn-cancel" onclick="closeStudentJitsi()">Leave Meeting</button>
+        </div>
+        <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
+    </div>
+</div>
+<script src="https://meet.ffmuc.net/external_api.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -426,11 +439,59 @@
             `;
         }
 
-        function joinMeeting() {
-            const roomName = "TechHub_Room_" + currentClassId;
-            const jitsiUrl = `https://meet.ffmuc.net/${roomName}`;
-            window.open(jitsiUrl, '_blank');
-        }
+        let studentJitsiApi = null;
+let currentAttendanceId = null;
+
+async function joinMeeting() {
+    document.getElementById('jitsiModal').style.display = 'flex';
+    const roomName = "TechHub_Room_" + currentClassId;
+    
+    // 1. Record Time In
+    const { data, error } = await _supabase
+        .from('attendance')
+        .insert([{ 
+            class_id: currentClassId, 
+            student_id: currentUser.id, 
+            time_in: new Date().toISOString() 
+        }])
+        .select();
+
+    if (data) currentAttendanceId = data[0].id;
+
+    // 2. Initialize Jitsi
+    const options = {
+        roomName: roomName,
+        parentNode: document.querySelector('#jitsi-container'),
+        userInfo: { displayName: currentUser.email.split('@')[0] } 
+    };
+    
+    studentJitsiApi = new JitsiMeetExternalAPI("meet.ffmuc.net", options);
+
+    // Auto-close if they click "Hangup" inside Jitsi
+    studentJitsiApi.addEventListener('videoConferenceLeft', () => {
+        closeStudentJitsi();
+    });
+}
+
+async function closeStudentJitsi() {
+    if (currentAttendanceId) {
+        const timeOut = new Date();
+        
+        // Log Time Out
+        await _supabase
+            .from('attendance')
+            .update({ time_out: timeOut.toISOString() })
+            .eq('id', currentAttendanceId);
+            
+        currentAttendanceId = null;
+    }
+
+    if (studentJitsiApi) {
+        studentJitsiApi.dispose();
+        studentJitsiApi = null;
+    }
+    document.getElementById('jitsiModal').style.display = 'none';
+}
 
         async function renderClasswork(container) {
             const { data: works } = await _supabase.from('classwork')
