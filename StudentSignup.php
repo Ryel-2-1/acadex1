@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Portal - Sign Up</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         /* --- General Reset --- */
         * {
@@ -216,10 +217,9 @@
     <a href="student_login.php" class="btn-login">Go to Student Login</a>
 </div>
 
-<!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // 1. Initialize Supabase Client using Azure/.env vars
+    // Supabase client
     const supabaseUrl = "<?php echo $_ENV['SUPABASE_URL'] ?? ''; ?>";
     const supabaseKey = "<?php echo $_ENV['SUPABASE_KEY'] ?? ''; ?>";
     const _supabase   = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -233,7 +233,7 @@
 
     function showMessage(text, type) {
         msgBox.textContent   = text;
-        msgBox.className     = type;  // 'success' or 'error'
+        msgBox.className     = type;   // "success" or "error"
         msgBox.style.display = 'block';
     }
 
@@ -272,9 +272,9 @@
             console.log("authData:", authData, "authError:", authError);
 
             if (authError) {
-                // If user already exists in auth.users
+                // Email already used in auth.users
                 if (authError.message && authError.message.toLowerCase().includes("already registered")) {
-                    showMessage("User already registered. Please log in instead.", "error");
+                    showMessage("User already registered. Please log in.", "error");
                     return;
                 }
                 showMessage(authError.message || "Error creating user.", "error");
@@ -288,21 +288,21 @@
 
             const user = authData.user;
 
-            // 2. Check if a profile row already exists (trigger may have created it)
-            const { data: existingProfile, error: fetchError } = await _supabase
+            // 2. Make sure profile row exists AND has role='student'
+            const { data: profileRow, error: selectError } = await _supabase
                 .from('profiles')
-                .select('id, role')
+                .select('id, role, full_name, email')
                 .eq('id', user.id)
                 .maybeSingle();
 
-            console.log("existingProfile:", existingProfile, "fetchError:", fetchError);
+            console.log("profileRow:", profileRow, "selectError:", selectError);
 
-            if (fetchError && fetchError.code !== 'PGRST116') { // ignore "No rows found" code
-                throw fetchError;
+            if (selectError && selectError.code !== 'PGRST116') {
+                throw selectError;
             }
 
-            if (!existingProfile) {
-                // No profile row yet → insert new
+            if (!profileRow) {
+                // No profile yet (no trigger) -> insert
                 const { error: insertError } = await _supabase
                     .from('profiles')
                     .insert({
@@ -315,7 +315,7 @@
                 console.log("insertError:", insertError);
                 if (insertError) throw insertError;
             } else {
-                // Row exists (probably from Supabase trigger) → make sure role + name are set
+                // Profile exists (from trigger or earlier) -> update / ensure role
                 const { error: updateError } = await _supabase
                     .from('profiles')
                     .update({
