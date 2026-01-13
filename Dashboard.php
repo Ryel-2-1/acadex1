@@ -1,14 +1,14 @@
 <?php
+// We don't strictly need PHP session if we use Supabase Auth, 
+// but it's good to keep for hybrid apps.
 session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>TechHub - Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -29,7 +29,7 @@ session_start();
         .nav-item:hover { color: #1a73e8; }
 
         .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #ddd; background-size: cover; background-position: center; }
         
         .logout-btn { margin-left: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; transition: 0.2s; padding: 5px; }
         .logout-btn:hover { color: #e74c3c; transform: scale(1.1); }
@@ -47,12 +47,11 @@ session_start();
         /* BOTTOM GRID */
         .bottom-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 30px; align-items: start; }
 
-        /* ACTIVITY (No scrollbar) */
-        .activity-card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; height: auto; overflow: visible; }
+        /* ACTIVITY */
+        .activity-card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; height: auto; min-height: 300px; }
         .activity-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; }
         .activity-header h3 { margin: 0; font-weight: 600; font-size: 18px; }
         
-        #activityList { height: auto; overflow: visible; }
         .activity-item { display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-start; }
         .activity-details p { margin: 0; font-size: 14px; line-height: 1.4; }
         .activity-meta { font-size: 12px; color: #999; margin-top: 4px; }
@@ -68,16 +67,13 @@ session_start();
         .has-event { position: relative; color: #1a73e8; font-weight: 700; }
         .has-event::after { content: ''; width: 4px; height: 4px; background: #e37400; border-radius: 50%; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); }
 
-        /* MODALS */
-        .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; border-radius: 8px; width: 500px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-        .modal-header { padding: 15px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 24px; overflow-y: auto; }
-        
+        /* LOADING OVERLAY */
+        #loading-screen { position: fixed; inset: 0; background: white; z-index: 999; display: flex; justify-content: center; align-items: center; font-size: 18px; color: #666; }
     </style>
 </head>
 
 <body>
+    <div id="loading-screen">Loading your Dashboard...</div>
 
     <header>
         <div class="logo-section" onclick="window.location.href='Dashboard.php'">
@@ -90,10 +86,10 @@ session_start();
         </nav>
         <div class="profile-section">
             <div style="text-align:right;">
-                <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+                <h4 id="profile-name" style="margin:0; font-size:14px;">Loading...</h4>
                 <span style="font-size:12px; color:#777;">Teacher</span>
             </div>
-            <div class="avatar"></div>
+            <div class="avatar" id="profile-avatar"></div>
             <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
     </header>
@@ -102,7 +98,7 @@ session_start();
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-regular fa-clock"></i></div>
-                <div class="stat-label">Upcoming</div>
+                <div class="stat-label">Upcoming Deadlines</div>
                 <div class="stat-number" id="deadlineCount">0</div>
             </div>
 
@@ -114,7 +110,7 @@ session_start();
 
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
-                <div class="stat-label">Total Classes</div>
+                <div class="stat-label">My Classes</div>
                 <div class="stat-number" id="classCount">0</div>
             </div>
         </div>
@@ -123,9 +119,6 @@ session_start();
             <div class="activity-card">
                 <div class="activity-header">
                     <h3>Recent Student Activity</h3>
-                    <button onclick="openActivityModal()" style="background:none; border:none; color:#1a73e8; font-weight:600; cursor:pointer; font-size:14px;">
-                        View All
-                    </button>
                 </div>
                 <div id="activityList">
                     <p style="color:#999">Loading activity...</p>
@@ -142,103 +135,130 @@ session_start();
         </div>
     </main>
 
-    <div id="activityModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 style="margin:0; font-size:20px;">All Student Activity</h2>
-                <span style="cursor:pointer; font-size:24px;" onclick="closeAllModals()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="fullActivityList"></div>
-            </div>
-        </div>
-    </div>
-
     <script>
+        // 1. Initialize Supabase
         const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
-        let supabaseClient;
-        const currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" };
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        try {
-            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        } catch (e) { console.error("Supabase Init Error:", e); }
+        let currentUser = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initCalendar();
-            if (supabaseClient) {
-                fetchRecentActivity();
-                fetchTotalStudentCount();
-                fetchStatsAndCalendar();
-                fetchClassCount();
+        // 2. Main Loader
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check Session
+            const { data: { session } } = await _supabase.auth.getSession();
+
+            if (!session) {
+                // Not logged in? Go to login
+                window.location.href = 'teacher_login.php';
+                return;
             }
+
+            currentUser = session.user;
+
+            // Load all data in parallel
+            await Promise.all([
+                fetchUserProfile(),
+                fetchClassCount(),
+                fetchTotalStudentCount(),
+                fetchStatsAndCalendar(),
+                fetchRecentActivity()
+            ]);
+            
+            initCalendar();
+
+            // Hide loading screen
+            document.getElementById('loading-screen').style.display = 'none';
         });
 
+        // 3. Fetch User Profile (Name & Avatar)
+        async function fetchUserProfile() {
+            try {
+                const { data: profile, error } = await _supabase
+                    .from('profiles')
+                    .select('full_name, role')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (profile) {
+                    // Update Name
+                    document.getElementById('profile-name').innerText = profile.full_name;
+                    
+                    // Update Avatar (Generates a colorful image with their initials)
+                    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=0D8ABC&color=fff`;
+                    document.getElementById('profile-avatar').style.backgroundImage = `url('${avatarUrl}')`;
+                }
+            } catch (err) {
+                console.error("Profile Error:", err);
+            }
+        }
+
+        // 4. Fetch Count of Classes for THIS teacher
         async function fetchClassCount() {
-            const { count } = await supabaseClient.from('classes').select('*', { count: 'exact', head: true }).eq('teacher_id', currentUser.id);
+            const { count } = await _supabase
+                .from('classes')
+                .select('*', { count: 'exact', head: true })
+                .eq('teacher_id', currentUser.id); // <--- Uses dynamic ID
+            
             document.getElementById('classCount').innerText = count || 0;
         }
 
+        // 5. Fetch Count of Unique Students
+        async function fetchTotalStudentCount() {
+            try {
+                // Get my classes first
+                const { data: classes } = await _supabase.from('classes').select('id').eq('teacher_id', currentUser.id);
+                if (!classes || classes.length === 0) return;
+
+                const classIds = classes.map(c => c.id);
+
+                // Get enrollments for those classes
+                const { data: enrollments } = await _supabase.from('enrollments').select('student_id').in('class_id', classIds);
+                
+                // Count unique students
+                const uniqueStudents = new Set(enrollments.map(e => e.student_id));
+                document.getElementById('studentCount').innerText = uniqueStudents.size;
+            } catch (e) { console.error(e); }
+        }
+
+        // 6. Fetch Recent Activity
         async function fetchRecentActivity() {
             const list = document.getElementById('activityList');
             try {
-                const { data: myClasses } = await supabaseClient.from('classes').select('id').eq('teacher_id', currentUser.id);
+                const { data: myClasses } = await _supabase.from('classes').select('id').eq('teacher_id', currentUser.id);
+                
                 if (!myClasses || myClasses.length === 0) {
                     list.innerHTML = '<p style="color:#999; text-align:center; padding:15px;">No activity yet.</p>';
                     return;
                 }
+
                 const classIds = myClasses.map(c => c.id);
-                const { data: activity, error } = await supabaseClient
+
+                // Fetch enrollments (or you could fetch 'submissions' if you have that table)
+                const { data: activity, error } = await _supabase
                     .from('enrollments')
-                    .select(`joined_at, student:profiles(full_name), class:classes(title)`)
+                    .select(`joined_at, student:profiles(full_name), class:classes(title)`) // Ensure these relationships exist in Supabase!
                     .in('class_id', classIds)
                     .order('joined_at', { ascending: false })
                     .limit(5);
 
                 if (error) throw error;
                 renderActivityList(activity, list);
+
             } catch (err) { console.error("Activity Error:", err); }
-        }
-
-        async function fetchTotalStudentCount() {
-            try {
-                const { data: classes } = await supabaseClient.from('classes').select('id').eq('teacher_id', currentUser.id);
-                if (!classes || classes.length === 0) return;
-                const classIds = classes.map(c => c.id);
-                const { data: enrollments } = await supabaseClient.from('enrollments').select('student_id').in('class_id', classIds);
-                const uniqueStudents = new Set(enrollments.map(e => e.student_id));
-                document.getElementById('studentCount').innerText = uniqueStudents.size;
-            } catch (e) { console.error(e); }
-        }
-
-        window.openActivityModal = async function () {
-            document.getElementById('activityModal').style.display = 'flex';
-            const list = document.getElementById('fullActivityList');
-            list.innerHTML = '<p style="text-align:center; padding:20px; color:#777;">Loading...</p>';
-            try {
-                const { data: myClasses } = await supabaseClient.from('classes').select('id').eq('teacher_id', currentUser.id);
-                const classIds = myClasses.map(c => c.id);
-                const { data: activity } = await supabaseClient
-                    .from('enrollments')
-                    .select(`joined_at, student:profiles(full_name), class:classes(title)`)
-                    .in('class_id', classIds)
-                    .order('joined_at', { ascending: false })
-                    .limit(50);
-                renderActivityList(activity, list);
-            } catch (err) { list.innerHTML = '<p style="color:red; text-align:center;">Error loading details.</p>'; }
         }
 
         function renderActivityList(data, container) {
             container.innerHTML = '';
             if (!data || data.length === 0) {
-                container.innerHTML = '<p style="color:#999; text-align:center; padding:15px;">No students found.</p>';
+                container.innerHTML = '<p style="color:#999; text-align:center; padding:15px;">No recent activity.</p>';
                 return;
             }
             data.forEach(act => {
                 const div = document.createElement('div');
                 div.className = 'activity-item';
                 const date = new Date(act.joined_at);
-                const name = act.student ? act.student.full_name : "Unknown";
+                const name = act.student ? act.student.full_name : "Unknown Student";
                 const className = act.class ? act.class.title : "Class";
                 const initial = name.charAt(0).toUpperCase();
 
@@ -246,15 +266,17 @@ session_start();
                     <div style="background:#1a73e8; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; border-radius:50%; width:35px; height:35px; flex-shrink:0;">${initial}</div>
                     <div class="activity-details">
                         <p><strong>${name}</strong> joined <span style="color:#1a73e8; font-weight:600;">${className}</span></p>
-                        <div class="activity-meta">${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div class="activity-meta">${date.toLocaleDateString()}</div>
                     </div>`;
                 container.appendChild(div);
             });
         }
 
+        // 7. Stats & Calendar
         async function fetchStatsAndCalendar() {
             try {
-                const { data: deadlines } = await supabaseClient
+                // Assuming you have a 'classwork' table
+                const { data: deadlines } = await _supabase
                     .from('classwork')
                     .select('due_date')
                     .eq('teacher_id', currentUser.id)
@@ -262,25 +284,34 @@ session_start();
                     .gte('due_date', new Date().toISOString());
 
                 document.getElementById('deadlineCount').innerText = deadlines ? deadlines.length : 0;
+                
                 const eventDates = deadlines ? deadlines.map(d => new Date(d.due_date).getDate()) : [];
                 renderCalendar(eventDates);
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                // If table doesn't exist yet, ignore error
+                console.log("Classwork table might not exist yet."); 
+            }
         }
 
+        // 8. Calendar UI Logic
         function initCalendar() { renderCalendar([]); }
 
         function renderCalendar(activeDays) {
             const date = new Date();
             const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            
             document.getElementById('calMonth').innerText = months[date.getMonth()];
             document.getElementById('calYear').innerText = date.getFullYear();
+            
             const grid = document.getElementById('calGrid');
             grid.innerHTML = '<div class="day-name">S</div><div class="day-name">M</div><div class="day-name">T</div><div class="day-name">W</div><div class="day-name">T</div><div class="day-name">F</div><div class="day-name">S</div>';
+            
             const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
             const lastDate = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const today = date.getDate();
 
             for (let i = 0; i < firstDay; i++) { grid.appendChild(document.createElement('div')); }
+            
             for (let i = 1; i <= lastDate; i++) {
                 const div = document.createElement('div');
                 div.className = 'date';
@@ -291,15 +322,11 @@ session_start();
             }
         }
 
-        function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
-        window.onclick = function (e) { if (e.target.classList.contains('modal-overlay')) closeAllModals(); }
-
+        // 9. Logout
         async function handleLogout() {
             if (confirm("Are you sure you want to log out?")) {
-                try {
-                    if (supabaseClient.auth) await supabaseClient.auth.signOut();
-                    window.location.href = 'index.php';
-                } catch (err) { window.location.href = 'index.php'; }
+                await _supabase.auth.signOut();
+                window.location.href = 'teacher_login.php';
             }
         }
     </script>

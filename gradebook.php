@@ -1,450 +1,293 @@
 <?php
 session_start();
-// Security Check (Uncomment when login is ready)
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
-//    header("Location: teacher_login.php");
-//    exit();
-// }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechHub - Gradebook</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechHub - Gradebook</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+    /* --- GENERAL RESET --- */
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; height: 100vh; display: flex; flex-direction: column; }
+    * { box-sizing: border-box; }
+
+    /* --- HEADER --- */
+    header { background: white; padding: 0 40px; height: 70px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; z-index: 100; }
+    .logo-section { display: flex; align-items: center; gap: 10px; width: 250px; cursor: pointer; }
+    .logo-icon { font-size: 32px; color: #1a73e8; }
+    .logo-text { font-size: 24px; font-weight: 700; color: #000; }
+    .nav-links { display: flex; gap: 30px; height: 100%; }
+    .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; height: 100%; cursor: pointer; }
+    .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
+    .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #ddd; background-size: cover; background-position: center; }
+    .logout-btn { margin-left: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; transition: 0.2s; padding: 5px; }
+    .logout-btn:hover { color: #e74c3c; transform: scale(1.1); }
+
+    /* --- LAYOUT --- */
+    .main-content { flex: 1; padding: 30px 50px; overflow-y: auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .class-selector { padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; min-width: 250px; }
+
+    /* --- GRADEBOOK TABLE --- */
+    .gradebook-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; border: 1px solid #e0e0e0; padding-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; vertical-align: middle; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; position: sticky; top: 0; z-index: 10; }
+    th:first-child, td:first-child { position: sticky; left: 0; background: white; z-index: 11; border-right: 2px solid #e0e0e0; width: 220px; }
+    th:first-child { background: #f8f9fa; z-index: 12; }
     
-    <style>
-        /* --- GENERAL RESET --- */
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; }
-        * { box-sizing: border-box; }
+    .cell-wrapper { display: flex; align-items: center; gap: 8px; }
+    .grade-input { width: 50px; padding: 5px; border: 1px solid transparent; text-align: center; border-radius: 4px; background: transparent; font-weight: 500; }
+    .grade-input:hover { border-color: #ddd; background: #fff; }
+    .grade-input:focus { border-color: #1a73e8; outline: none; background: #fff; }
+    
+    /* Status Icons */
+    .status-icon { cursor: pointer; font-size: 14px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s; }
+    .status-submitted { color: #1a73e8; background: #e8f0fe; }
+    .status-submitted:hover { background: #d2e3fc; }
+    .status-missing { color: #d93025; font-size: 12px; }
 
-        /* --- HEADER STYLES --- */
-        header { background-color: white; padding: 0 40px; height: 70px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: sticky; top: 0; z-index: 100; }
-        .logo-section { display: flex; align-items: center; gap: 10px; width: 250px; cursor:pointer; }
-        .logo-icon { font-size: 32px; color: #1a73e8; }
-        .logo-text { font-size: 24px; font-weight: 700; color: #000; }
-        .nav-links { display: flex; gap: 30px; height: 100%; }
-        .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; font-size: 16px; padding: 0 5px; position: relative; height: 100%; cursor: pointer; }
-        .nav-item:hover, .nav-item.active { color: #1a73e8; }
-        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background-color: #1a73e8; }
-        .profile-section { display: flex; align-items: center; gap: 12px; text-align: right; width: 250px; justify-content: flex-end; }
-        .profile-info h4 { margin: 0; font-size: 15px; font-weight: 600; color: #333; }
-        .profile-info span { font-size: 13px; color: #777; display: block; }
-        .avatar { width: 40px; height: 40px; background-color: #ddd; border-radius: 50%; background-image: url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
+    .student-row:hover { background-color: #fcfcfc; }
+    .assignment-header { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+    .date-sub { display: block; font-size: 11px; color: #999; font-weight: 400; margin-top: 4px; }
 
-        /* --- GRADEBOOK SPECIFIC STYLES --- */
-        main { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    /* Submission Modal */
+    .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+    .modal-content { background: white; border-radius: 8px; width: 500px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .modal-body { margin-bottom: 20px; }
+    .file-preview { padding: 15px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px; word-break: break-all; }
+    .btn-close { background: #eee; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 
-        .gb-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid #e0e0e0; }
-        .filter-group { display: flex; gap: 15px; align-items: center; flex: 1; }
-        
-        select.gb-select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; color: #444; outline: none; min-width: 250px; font-size: 14px; }
-
-        .search-box { position: relative; }
-        .search-box input { padding: 8px 12px 8px 35px; border: 1px solid #ddd; border-radius: 20px; font-family: inherit; outline: none; width: 100%; min-width: 250px; }
-        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; }
-
-        .export-btn { background-color: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .export-btn:hover { background-color: #219150; }
-
-        /* Grade Table */
-        .table-container { background: white; border-radius: 8px; border: 1px solid #e0e0e0; overflow-x: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.02); min-height: 400px; }
-        table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        thead { background-color: #f8f9fa; border-bottom: 2px solid #e0e0e0; position: sticky; top: 0; z-index: 10; }
-        th { text-align: left; padding: 15px 20px; font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; white-space: nowrap; border-right: 1px solid #eee; vertical-align: middle; }
-        td { padding: 12px 20px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; border-right: 1px solid #eee; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover { background-color: #fcfcfc; }
-
-        /* Sticky First Column */
-        th:first-child, td:first-child { position: sticky; left: 0; background: white; z-index: 20; border-right: 2px solid #e0e0e0; width: 250px; }
-        th:first-child { background: #f8f9fa; z-index: 30; }
-        tr:hover td:first-child { background-color: #fcfcfc; }
-
-        /* Student Cell Style */
-        .student-cell { display: flex; align-items: center; gap: 12px; }
-        .student-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #e3f2fd; color: #1976D2; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-
-        /* Input Grade Cell */
-        .grade-input { width: 60px; padding: 8px; border: 1px solid transparent; border-radius: 4px; text-align: center; font-family: inherit; background: transparent; transition: 0.2s; font-weight: 600; font-size: 14px; }
-        .grade-input:hover { background: #f5f5f5; border-color: #ddd; }
-        .grade-input:focus { background: white; border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
-
-        .saving-status { font-size: 12px; color: #1a73e8; margin-left: 15px; display: none; font-weight: 600; align-items: center; gap: 5px; }
-        
-        #loadingMsg { text-align: center; padding: 60px; color: #777; font-size: 16px; font-style: italic; }
-    </style>
+    #loading-state { text-align: center; padding: 50px; color: #777; font-size: 18px; }
+    #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
+</style>
 </head>
 <body>
 
+    <div id="global-loader">Loading...</div>
+
     <header>
         <div class="logo-section" onclick="window.location.href='Dashboard.php'">
-            <i class="fa-solid fa-book-open logo-icon"></i>
-            <span class="logo-text">TechHub</span>
+            <i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span>
         </div>
-
         <nav class="nav-links">
-            <a href="Dashboard.php" class="nav-item">
-                <i class="fa-solid fa-border-all"></i> Dashboard
-            </a>
-            <a href="Classwork.php" class="nav-item">
-                <i class="fa-solid fa-book"></i> Classes
-            </a>
-            <a href="gradebook.php" class="nav-item active">
-                <i class="fa-solid fa-graduation-cap"></i> Gradebook
-            </a>
+            <a href="Dashboard.php" class="nav-item">Dashboard</a>
+            <a href="Classwork.php" class="nav-item">Classes</a>
+            <a href="gradebook.php" class="nav-item active">Gradebook</a>
         </nav>
-
         <div class="profile-section">
-            <div class="profile-info">
-                <h4>Prof. Jhomari</h4>
-                <span>Teacher</span>
+            <div style="text-align:right;">
+                <h4 id="profile-name" style="margin:0; font-size:14px;">Loading...</h4>
+                <span style="font-size:12px; color:#777;">Teacher</span>
             </div>
-            <div class="avatar"></div>
+            <div class="avatar" id="profile-avatar"></div>
+            <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
     </header>
 
-    <main>
-        
-        <div class="gb-toolbar">
-            <div class="filter-group">
-                <label style="font-weight:600; font-size:14px;">Class:</label>
-                <select class="gb-select" id="classSelector" onchange="loadGradebook(this.value)">
-                    <option value="">-- Select Class to View Grades --</option>
-                </select>
-
-                <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="studentSearch" placeholder="Search student..." onkeyup="filterTable()">
-                </div>
-                
-                <span id="saveStatus" class="saving-status"><i class="fa-solid fa-spinner fa-spin"></i> Saving...</span>
-            </div>
-
-<button class="export-btn" onclick="exportToCSV()">
-    <i class="fa-solid fa-file-csv"></i> Export CSV
-</button>
+    <main class="main-content">
+        <div class="page-header">
+            <h2 style="margin:0; font-weight:400;">Gradebook</h2>
+            <select id="classSelect" class="class-selector" onchange="loadGradebook()">
+                <option value="" disabled selected>Select a Class</option>
+            </select>
         </div>
 
-        <div class="table-container">
-            <div id="loadingMsg">Select a class above to view grades.</div>
-            
-            <table id="gradeTable" style="display:none;">
+        <div id="loading-state">Please select a class to view grades.</div>
+
+        <div id="gradebook-wrapper" class="gradebook-container" style="display:none;">
+            <table id="gradeTable">
                 <thead>
-                    <tr id="headerRow">
-                        </tr>
+                    <tr id="tableHeaderRow">
+                        <th>Student Name</th>
+                    </tr>
                 </thead>
-                <tbody id="gradeBody">
-                    </tbody>
+                <tbody id="tableBody"></tbody>
             </table>
         </div>
-
     </main>
 
-    <script>
-        // --- SUPABASE CONFIG ---
-        const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
-        let supabaseClient;
-        const currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" }; // Hardcoded Teacher ID
+    <div id="submissionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0;">Student Submission</h3>
+                <span style="cursor:pointer; font-size:24px;" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                </div>
+            <div style="text-align:right;">
+                <button class="btn-close" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
-        try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
-        catch (e) { console.error("Init Error", e); }
+<script>
+    const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+    let supabaseClient;
+    let currentUser = null;
 
-        // --- INIT ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadClassList();
-            
-            // Auto-load if ID in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const classId = urlParams.get('class_id');
-            if (classId) {
-                const select = document.getElementById('classSelector');
-                // Wait for options to populate before setting value
-                // Since loadClassList is awaited above, we can set it now
-                if (select.querySelector(`option[value="${classId}"]`)) {
-                    select.value = classId;
-                    loadGradebook(classId);
-                }
-            }
-        });
+    try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
+    catch (e) { console.error(e); }
 
-        // --- 1. LOAD CLASSES ---
-        async function loadClassList() {
-            const { data, error } = await supabaseClient
-                .from('classes')
-                .select('id, title, section')
-                .eq('teacher_id', currentUser.id)
-                .order('created_at', { ascending: false });
+    document.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) { window.location.href = 'teacher_login.php'; return; }
+        currentUser = session.user;
 
-            const select = document.getElementById('classSelector');
-            
-            if (error) { console.error(error); return; }
-            
-            if (data && data.length > 0) {
-                data.forEach(cls => {
-                    const opt = document.createElement('option');
-                    opt.value = cls.id;
-                    opt.innerText = `${cls.title} (${cls.section})`;
-                    select.appendChild(opt);
-                });
-            } else {
-                select.innerHTML = '<option value="">No classes found</option>';
-            }
-        }
-
-        // --- 2. LOAD GRADEBOOK ---
-        async function loadGradebook(classId) {
-            if(!classId) return;
-            
-            const loader = document.getElementById('loadingMsg');
-            const table = document.getElementById('gradeTable');
-            
-            table.style.display = 'none';
-            loader.style.display = 'block';
-            loader.innerText = "Loading students and assignments...";
-
-            try {
-                // A. Get Assignments (Columns)
-                const { data: assignments, error: assignError } = await supabaseClient
-                    .from('classwork')
-                    .select('id, title, type')
-                    .eq('class_id', classId)
-                    .in('type', ['assignment', 'quiz']) // Only gradable items
-                    .order('created_at', { ascending: true }); // Oldest to newest (left to right)
-
-                if (assignError) throw assignError;
-
-                // B. Get Students (Rows)
-                const { data: enrollments, error: enrollError } = await supabaseClient
-                    .from('enrollments')
-                    .select('student:profiles(id, full_name, email)')
-                    .eq('class_id', classId);
-
-                if (enrollError) throw enrollError;
-
-                // Sort students manually by name
-                if (enrollments) {
-                    enrollments.sort((a, b) => 
-                        (a.student?.full_name || "").localeCompare(b.student?.full_name || "")
-                    );
-                }
-
-                // C. Get Grades
-                let grades = [];
-                if (assignments.length > 0) {
-                    const assignmentIds = assignments.map(a => a.id);
-                    const { data: gradeData } = await supabaseClient
-                        .from('submissions')
-                        .select('student_id, classwork_id, grade')
-                        .in('classwork_id', assignmentIds);
-                    grades = gradeData || [];
-                }
-
-                renderTable(enrollments, assignments, grades);
-
-            } catch (err) {
-                console.error("Error:", err);
-                loader.innerText = "Error loading data. Please refresh.";
-            }
-        }
-
-        // --- 3. RENDER TABLE ---
-        function renderTable(enrollments, assignments, grades) {
-            const loader = document.getElementById('loadingMsg');
-            const table = document.getElementById('gradeTable');
-            const headerRow = document.getElementById('headerRow');
-            const body = document.getElementById('gradeBody');
-
-            loader.style.display = 'none';
-            table.style.display = 'table';
-            headerRow.innerHTML = '';
-            body.innerHTML = '';
-
-            // --- HEADERS (Columns) ---
-            const thName = document.createElement('th');
-            thName.innerText = "Student Name";
-            headerRow.appendChild(thName);
-
-            if (!assignments || assignments.length === 0) {
-                const th = document.createElement('th');
-                th.innerText = "No Assignments Yet";
-                th.style.fontWeight = "400";
-                th.style.color = "#999";
-                headerRow.appendChild(th);
-            } else {
-                assignments.forEach(a => {
-                    const th = document.createElement('th');
-                    // Icon logic
-                    const icon = a.type === 'quiz' ? '<i class="fa-solid fa-robot"></i>' : '<i class="fa-solid fa-file-pen"></i>';
-                    th.innerHTML = `${icon} <br>${a.title}`;
-                    th.style.textAlign = "center";
-                    headerRow.appendChild(th);
-                });
-            }
-
-            // --- ROWS (Students) ---
-            if (!enrollments || enrollments.length === 0) {
-                body.innerHTML = '<tr><td colspan="100" style="padding:40px; text-align:center; color:#777;">No students enrolled in this class.</td></tr>';
-                return;
-            }
-
-            enrollments.forEach(enr => {
-                const student = enr.student;
-                if(!student) return;
-
-                const tr = document.createElement('tr');
-
-                // 1. Student Name Cell
-                const tdName = document.createElement('td');
-                const initials = student.full_name ? student.full_name.substring(0,2).toUpperCase() : "??";
-                tdName.innerHTML = `
-                    <div class="student-cell">
-                        <div class="student-avatar">${initials}</div>
-                        <div>
-                            <div style="font-weight:600;">${student.full_name}</div>
-                            <div style="font-size:11px; color:#888;">${student.email || ''}</div>
-                        </div>
-                    </div>`;
-                tr.appendChild(tdName);
-
-                // 2. Grade Input Cells
-                if (assignments.length > 0) {
-                    assignments.forEach(assign => {
-                        const existing = grades.find(g => g.student_id === student.id && g.classwork_id === assign.id);
-                        const val = existing ? existing.grade : '';
-
-                        const td = document.createElement('td');
-                        td.style.textAlign = 'center';
-                        td.innerHTML = `<input type="number" class="grade-input" 
-                                        placeholder="-" value="${val}" 
-                                        onchange="saveGrade(this, '${assign.id}', '${student.id}')">`;
-                        tr.appendChild(td);
-                    });
-                } else {
-                    tr.appendChild(document.createElement('td')); // Empty cell filler
-                }
-
-                body.appendChild(tr);
-            });
-        }
-
-        // --- 4. SAVE GRADE ---
-        async function saveGrade(input, classworkId, studentId) {
-            const val = input.value;
-            const statusEl = document.getElementById('saveStatus');
-            
-            statusEl.style.display = 'inline-flex';
-            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-            input.style.backgroundColor = "#fff";
-
-            try {
-                const grade = val === '' ? null : parseInt(val);
-
-                const { error } = await supabaseClient
-                    .from('submissions')
-                    .upsert({ 
-                        classwork_id: classworkId, 
-                        student_id: studentId, 
-                        grade: grade,
-                        status: 'graded'
-                    }, { onConflict: 'classwork_id, student_id' });
-
-                if (error) throw error;
-
-                // Success
-                input.style.borderColor = "#27ae60";
-                input.style.backgroundColor = "#e8f5e9";
-                statusEl.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
-                statusEl.style.color = "#27ae60";
-                
-                setTimeout(() => { 
-                    input.style.borderColor = "transparent"; 
-                    input.style.backgroundColor = "transparent";
-                    statusEl.style.display = 'none';
-                    statusEl.style.color = "#1a73e8"; 
-                }, 1500);
-
-            } catch (err) {
-                console.error("Save failed:", err);
-                input.style.borderColor = "#c62828";
-                input.style.backgroundColor = "#ffebee";
-                alert("Failed to save grade.");
-            }
-        }
-
-        // --- 5. SEARCH FILTER ---
-        function filterTable() {
-            const filter = document.getElementById('studentSearch').value.toUpperCase();
-            const trs = document.getElementById('gradeTable').getElementsByTagName('tr');
-            
-            for (let i = 1; i < trs.length; i++) {
-                const td = trs[i].getElementsByTagName('td')[0];
-                if (td) {
-                    const txt = td.textContent || td.innerText;
-                    trs[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-                }
-            }
-        }
-        // --- 6. EXPORT TO CSV ---
-function exportToCSV() {
-    const table = document.getElementById('gradeTable');
-    if (!table || table.style.display === 'none') {
-        alert("Please select a class and wait for grades to load before exporting.");
-        return;
-    }
-
-    let csvContent = "";
-    const rows = table.querySelectorAll("tr");
-
-    rows.forEach((row) => {
-        const rowData = [];
-        const cols = row.querySelectorAll("th, td");
-
-        cols.forEach((col, index) => {
-            let data = "";
-            
-            // If it's the first column (Student Name), we need to extract text carefully
-            if (index === 0) {
-                // Gets the full name text from the student-cell div
-                data = col.querySelector('div[style*="font-weight:600"]') ? 
-                       col.querySelector('div[style*="font-weight:600"]').innerText : 
-                       col.innerText;
-            } else {
-                // Check if there is an input (grade), otherwise take innerText
-                const input = col.querySelector('input');
-                data = input ? input.value : col.innerText;
-            }
-
-            // Clean data: remove newlines and escape double quotes
-            data = data.replace(/\n/g, ' ').replace(/"/g, '""');
-            
-            // Wrap in quotes to handle commas within the data
-            rowData.push(`"${data}"`);
-        });
-
-        csvContent += rowData.join(",") + "\n";
+        await fetchUserProfile();
+        await fetchClasses();
+        document.getElementById('global-loader').style.display = 'none';
     });
 
-    // Create a download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    
-    // Create filename based on class name or timestamp
-    const className = document.getElementById('classSelector').selectedOptions[0].text;
-    const filename = `Grades_${className.replace(/[/\\?%*:|"<>]/g, '-')}.csv`;
+    async function fetchUserProfile() {
+        const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', currentUser.id).single();
+        if (profile) {
+            document.getElementById('profile-name').innerText = profile.full_name;
+            document.getElementById('profile-avatar').style.backgroundImage = `url('https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=0D8ABC&color=fff')`;
+        }
+    }
 
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-    </script>
+    async function fetchClasses() {
+        const select = document.getElementById('classSelect');
+        const { data: classes } = await supabaseClient.from('classes').select('id, title, section').eq('teacher_id', currentUser.id).order('created_at', { ascending: false });
+
+        if (classes && classes.length > 0) {
+            classes.forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls.id;
+                opt.innerText = `${cls.title} (${cls.section})`;
+                select.appendChild(opt);
+            });
+            select.value = classes[0].id;
+            loadGradebook();
+        } else {
+            document.getElementById('loading-state').innerText = "No classes found.";
+        }
+    }
+
+    async function loadGradebook() {
+        const classId = document.getElementById('classSelect').value;
+        const wrapper = document.getElementById('gradebook-wrapper');
+        const loading = document.getElementById('loading-state');
+        const theadRow = document.getElementById('tableHeaderRow');
+        const tbody = document.getElementById('tableBody');
+
+        if(!classId) return;
+        wrapper.style.display = 'none'; loading.style.display = 'block'; loading.innerText = "Loading grades...";
+
+        try {
+            // 1. Fetch Students
+            const { data: enrollments } = await supabaseClient.from('enrollments').select('student_id, student:profiles!student_id(full_name)').eq('class_id', classId);
+            
+            // 2. Fetch Assignments
+            const { data: assignments } = await supabaseClient.from('classwork').select('id, title, due_date').eq('class_id', classId).order('created_at', { ascending: true });
+
+            // 3. Fetch Grades
+            const assignmentIds = assignments.map(a => a.id);
+            let gradesMap = {};
+            if (assignmentIds.length > 0) {
+                const { data: grades } = await supabaseClient.from('grades').select('*').in('classwork_id', assignmentIds);
+                grades.forEach(g => { gradesMap[`${g.student_id}-${g.classwork_id}`] = g.score; });
+            }
+
+            // 4. NEW: Fetch Submissions
+            let submissionsMap = {};
+            if (assignmentIds.length > 0) {
+                const { data: subs } = await supabaseClient.from('submissions').select('*').in('classwork_id', assignmentIds);
+                subs.forEach(s => { submissionsMap[`${s.student_id}-${s.classwork_id}`] = s; });
+            }
+
+            // Build Header
+            theadRow.innerHTML = '<th>Student Name</th>';
+            assignments.forEach(a => {
+                theadRow.innerHTML += `<th><div class="assignment-header" title="${a.title}">${a.title}</div><span class="date-sub">${a.due_date ? new Date(a.due_date).toLocaleDateString() : '-'}</span></th>`;
+            });
+
+            // Build Body
+            tbody.innerHTML = '';
+            if (!enrollments || enrollments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="100%" style="text-align:center; padding:20px;">No students enrolled yet.</td></tr>';
+            } else {
+                enrollments.forEach(enr => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'student-row';
+                    let rowHtml = `<td style="font-weight:500;">${enr.student ? enr.student.full_name : 'Unknown'}</td>`;
+
+                    assignments.forEach(a => {
+                        const key = `${enr.student_id}-${a.id}`;
+                        const score = gradesMap[key] !== undefined ? gradesMap[key] : '';
+                        const sub = submissionsMap[key];
+                        
+                        let statusIcon = '';
+                        if (sub) {
+                            // Pass data to modal using data attributes
+                            const safeContent = sub.content ? sub.content.replace(/"/g, '&quot;') : '';
+                            const safeFile = sub.file_url ? sub.file_url : '';
+                            const safeDate = new Date(sub.submitted_at).toLocaleString();
+                            
+                            statusIcon = `<div class="status-icon status-submitted" onclick='viewSubmission("${safeContent}", "${safeFile}", "${safeDate}")' title="View Submission"><i class="fa-solid fa-eye"></i></div>`;
+                        } else {
+                            statusIcon = `<div class="status-icon status-missing" title="No work submitted"><i class="fa-solid fa-minus"></i></div>`;
+                        }
+
+                        rowHtml += `<td>
+                            <div class="cell-wrapper">
+                                ${statusIcon}
+                                <input type="number" class="grade-input" value="${score}" placeholder="-" onblur="saveGrade('${enr.student_id}', '${a.id}', this.value)">
+                            </div>
+                        </td>`;
+                    });
+                    tr.innerHTML = rowHtml;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            loading.style.display = 'none'; wrapper.style.display = 'block';
+
+        } catch (err) { console.error(err); loading.innerText = "Error loading data."; }
+    }
+
+    async function saveGrade(studentId, classworkId, value) {
+        if (value === '') return;
+        const { data: existing } = await supabaseClient.from('grades').select('id').eq('student_id', studentId).eq('classwork_id', classworkId).single();
+        if (existing) {
+            await supabaseClient.from('grades').update({ score: value }).eq('id', existing.id);
+        } else {
+            await supabaseClient.from('grades').insert([{ student_id: studentId, classwork_id: classworkId, score: value }]);
+        }
+    }
+
+    function viewSubmission(content, fileUrl, date) {
+        const body = document.getElementById('modalBody');
+        let html = `<p><strong>Submitted on:</strong> ${date}</p>`;
+        
+        if (content) {
+            html += `<div><strong>Student Answer:</strong><div class="file-preview">${content}</div></div>`;
+        }
+        if (fileUrl) {
+            html += `<div style="margin-top:15px;"><strong>Attached File:</strong><br><a href="${fileUrl}" target="_blank" style="color:#1a73e8; text-decoration:underline;">Download / View File</a></div>`;
+        }
+        if (!content && !fileUrl) {
+            html += `<p><em>Empty submission</em></p>`;
+        }
+        
+        body.innerHTML = html;
+        document.getElementById('submissionModal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('submissionModal').style.display = 'none'; }
+    window.onclick = function(e) { if(e.target.id === 'submissionModal') closeModal(); }
+
+    async function handleLogout() {
+        if (confirm("Logout?")) { await supabaseClient.auth.signOut(); window.location.href = 'teacher_login.php'; }
+    }
+</script>
 </body>
 </html>
