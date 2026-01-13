@@ -222,31 +222,26 @@
     
     <script>
         // 1. Initialize Supabase Client using Azure/.env vars
-        const supabaseUrl = "<?php echo $_ENV['SUPABASE_URL'] ?? ''; ?>";
-        const supabaseKey = "<?php echo $_ENV['SUPABASE_KEY'] ?? ''; ?>";
-        const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-        console.log("🔍 Supabase URL (student signup):", supabaseUrl);
-        console.log("🔍 Supabase key length (student signup):", supabaseKey.length);
+        const supabaseUrl  = "<?php echo $_ENV['SUPABASE_URL']  ?? ''; ?>";
+        const supabaseKey  = "<?php echo $_ENV['SUPABASE_KEY']  ?? ''; ?>";
+        const _supabase    = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         const signupForm = document.getElementById('signupForm');
-        const msgBox = document.getElementById('api-message');
-        const submitBtn = document.getElementById('submitBtn');
+        const msgBox     = document.getElementById('api-message');
+        const submitBtn  = document.getElementById('submitBtn');
 
-        // 2. Helper to show message
         function showMessage(text, type) {
             msgBox.textContent = text;
-            msgBox.className = type;
+            msgBox.className   = type;
             msgBox.style.display = 'block';
         }
 
-        // 3. Main Signup Logic
         signupForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const fullName = document.getElementById('full_name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+            const fullName        = document.getElementById('full_name').value.trim();
+            const email           = document.getElementById('email').value.trim();
+            const password        = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
 
             msgBox.style.display = 'none';
@@ -275,6 +270,10 @@
                 });
 
                 if (authError) {
+                    // nicer message when email already in use
+                    if (authError.message && authError.message.toLowerCase().includes("already registered")) {
+                        throw new Error("This email is already registered. Please log in instead.");
+                    }
                     throw authError;
                 }
 
@@ -284,21 +283,32 @@
 
                 const user = authData.user;
 
-                // STEP B: Insert profile row (role = student)
-                const { error: profileError } = await _supabase
+                // STEP B: Check if profile already exists for this auth user
+                const { data: existingProfile, error: checkError } = await _supabase
                     .from('profiles')
-                    .insert({
-                        id: user.id,          // must match auth.users.id
-                        full_name: fullName,
-                        email: email,
-                        role: 'student'
-                        // you can have a password column in profiles,
-                        // but avoid storing plain text passwords there
-                    });
+                    .select('id')
+                    .eq('id', user.id)
+                    .maybeSingle();
 
-                if (profileError) {
-                    console.error("Profile insert error:", profileError);
-                    throw profileError;
+                if (checkError && checkError.code !== 'PGRST116') { // ignore "No rows found" code
+                    throw checkError;
+                }
+
+                // Only INSERT if there is no row yet
+                if (!existingProfile) {
+                    const { error: profileError } = await _supabase
+                        .from('profiles')
+                        .insert({
+                            id: user.id,          // must match auth.users.id
+                            full_name: fullName,
+                            email: email,
+                            role: 'student'
+                        });
+
+                    if (profileError) {
+                        console.error("Profile insert error:", profileError);
+                        throw profileError;
+                    }
                 }
 
                 showMessage("Registration successful! Please check your email and then log in.", "success");
