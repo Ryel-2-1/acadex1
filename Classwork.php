@@ -1099,41 +1099,55 @@ async function fetchAttendance() {
     const tbody = document.getElementById('attendanceBody');
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading attendance...</td></tr>';
 
-    // Fetch from the View we created in Step 1
     const { data, error } = await supabaseClient
-        .from('class_attendance_summary')
-        .select('*')
+        .from('attendance')
+        .select('time_in, time_out, total_minutes, student:profiles(full_name)')
         .eq('class_id', currentClassId)
         .order('time_in', { ascending: false });
 
     if (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Error loading data.</td></tr>';
         return;
     }
 
     tbody.innerHTML = '';
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No attendance records found.</td></tr>';
         return;
     }
 
     data.forEach(record => {
-        const timeIn = new Date(record.time_in).toLocaleString();
-        const timeOut = record.time_out ? new Date(record.time_out).toLocaleString() : '<span style="color:green;">Still in Meeting</span>';
-        const duration = record.duration_minutes ? `${record.duration_minutes} mins` : '--';
+        const studentObj = Array.isArray(record.student) ? record.student[0] : record.student;
+        const studentName = (studentObj && studentObj.full_name) ? studentObj.full_name : 'Student';
+
+        const timeInStr = record.time_in ? new Date(record.time_in).toLocaleString() : '--';
+        const timeOutStr = record.time_out
+            ? new Date(record.time_out).toLocaleString()
+            : '<span style="color:green;">In meeting</span>';
+
+        let durationStr = '--';
+        if (record.total_minutes != null) {
+            durationStr = `${record.total_minutes} mins`;
+        } else if (record.time_in && record.time_out) {
+            // fallback: compute on the fly if needed
+            const diffMs = new Date(record.time_out) - new Date(record.time_in);
+            const mins = Math.round((diffMs / 60000) * 100) / 100;
+            durationStr = `${mins} mins`;
+        }
 
         const row = `
             <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 15px;">${record.student_name}</td>
-                <td style="padding: 15px;">${timeIn}</td>
-                <td style="padding: 15px;">${timeOut}</td>
-                <td style="padding: 15px; font-weight: bold;">${duration}</td>
+                <td style="padding: 15px;">${studentName}</td>
+                <td style="padding: 15px;">${timeInStr}</td>
+                <td style="padding: 15px;">${timeOutStr}</td>
+                <td style="padding: 15px; font-weight: bold;">${durationStr}</td>
             </tr>
         `;
         tbody.insertAdjacentHTML('beforeend', row);
     });
 }
+
 function switchTab(tabName) {
     // Hide all tab contents
     document.querySelectorAll('.active-tab-content').forEach(el => el.style.display = 'none');

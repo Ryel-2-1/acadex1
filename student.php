@@ -474,24 +474,34 @@ async function joinMeeting() {
 }
 
 async function closeStudentJitsi() {
-    if (currentAttendanceId) {
-        const timeOut = new Date();
-        
-        // Log Time Out
-        await _supabase
-            .from('attendance')
-            .update({ time_out: timeOut.toISOString() })
-            .eq('id', currentAttendanceId);
-            
-        currentAttendanceId = null;
-    }
+    try {
+        if (currentAttendanceId && currentAttendanceTimeIn) {
+            const timeOutDate = new Date();
+            const diffMs = timeOutDate.getTime() - currentAttendanceTimeIn.getTime();
+            const minutes = Math.round((diffMs / 60000) * 100) / 100; // 2 decimal places
 
-    if (studentJitsiApi) {
-        studentJitsiApi.dispose();
-        studentJitsiApi = null;
+            await _supabase
+                .from('attendance')
+                .update({
+                    time_out: timeOutDate.toISOString(),
+                    total_minutes: minutes          // <-- important: total_minutes
+                })
+                .eq('id', currentAttendanceId);
+        }
+    } catch (e) {
+        console.error("Error updating attendance:", e);
+    } finally {
+        currentAttendanceId = null;
+        currentAttendanceTimeIn = null;
+
+        if (jitsiApi) {
+            jitsiApi.dispose();
+            jitsiApi = null;
+        }
+        document.getElementById('studentJitsiModal').style.display = 'none';
     }
-    document.getElementById('jitsiModal').style.display = 'none';
 }
+
 
         async function renderClasswork(container) {
             const { data: works } = await _supabase.from('classwork')
