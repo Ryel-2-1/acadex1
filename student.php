@@ -209,7 +209,12 @@
         let currentView = 'home'; 
         let currentClassId = null; 
         let currentClassData = null; 
-        let currentOpenItem = null; 
+        let currentOpenItem = null;
+
+        // quiz state (NEW)
+        let currentQuizQuestions = [];
+        let quizHasMcq = false;
+        let quizHasOpen = false;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -481,19 +486,21 @@
             container.innerHTML = html;
         }
 
-        // --- MERGED OPEN ITEM: FETCHES STATUS + GRADE ---
+        // --- OPEN ITEM: NOW HANDLES QUIZ ANSWERING ---
         async function openItem(itemId) {
-            // 1. Fetch Details
             const { data: item, error } = await _supabase.from('classwork').select('*').eq('id', itemId).single();
             if (error || !item) return alert("Error loading details");
             currentOpenItem = item;
+
+            currentQuizQuestions = [];
+            quizHasMcq = false;
+            quizHasOpen = false;
 
             document.getElementById('asDetailTitle').innerText = item.title;
             const date = new Date(item.created_at).toLocaleString();
             document.getElementById('asDetailMeta').innerText = `Posted on ${date}`;
             document.getElementById('asDetailDesc').innerText = item.description || "No instructions provided.";
 
-            // 2. Fetch Submission Status (Crucial Step)
             const { data: sub } = await _supabase
                 .from('submissions')
                 .select('*')
@@ -501,58 +508,97 @@
                 .eq('classwork_id', itemId)
                 .maybeSingle();
 
-            // 3. Update UI based on Status/Grade
             const statusEl = document.getElementById('submissionStatus');
             const btn = document.getElementById('btnMarkDone');
             const fileLabel = document.getElementById('fileNameDisplay');
             const commentBox = document.getElementById('submissionComment');
+            const fileBox = document.querySelector('.file-upload-box');
 
-            // Defaults
             fileLabel.innerHTML = '<i class="fa-solid fa-plus"></i> Add or Create';
             commentBox.value = '';
-            
+
+            // default button text depends on type
+            btn.innerText = (item.type === 'quiz') ? "Submit Quiz" : "Mark as Done";
+
             if (sub) {
                 if (sub.status === 'graded') {
-                    statusEl.innerHTML = `<span style="color:#137333; font-weight:bold; font-size:18px;">${sub.grade}/100</span>`;
-                    btn.innerText = "Resubmit"; 
+                    if (sub.grade !== null) {
+                        statusEl.innerHTML = `<span style="color:#137333; font-weight:bold; font-size:18px;">${sub.grade}/100</span>`;
+                    } else {
+                        statusEl.innerText = "Graded";
+                    }
+                    btn.innerText = (item.type === 'quiz') ? "Retake Quiz" : "Resubmit";
                 } else if (sub.status === 'submitted') {
                     statusEl.innerText = "Turned In";
                     statusEl.style.color = "#1a73e8";
-                    btn.innerText = "Unsubmit";
+                    btn.innerText = (item.type === 'quiz') ? "Submit Quiz" : "Unsubmit";
                 }
 
                 if (sub.file_url) {
                     fileLabel.innerHTML = `<i class="fa-solid fa-file-check"></i> <a href="${sub.file_url}" target="_blank" style="text-decoration:none; color:inherit;">View Submitted File</a>`;
                 }
-                if (sub.content) commentBox.value = sub.content;
+                if (sub.content && item.type !== 'quiz') {
+                    commentBox.value = sub.content;
+                }
             } else {
                 statusEl.innerText = "Assigned";
                 statusEl.style.color = "#666";
-                btn.innerText = "Mark as Done";
             }
 
-            // 4. Render Quiz
             const quizDiv = document.getElementById('quizContainer');
             quizDiv.innerHTML = '';
+
             if (item.type === 'quiz' && item.quiz_data) {
+                // QUIZ MODE: render interactive questions, hide file upload box
+                fileBox.style.display = 'none';
                 quizDiv.style.display = 'block';
+
                 let qData = item.quiz_data;
                 if(typeof qData === 'string') { try{qData = JSON.parse(qData)}catch(e){} }
                 if (Array.isArray(qData)) {
-                    let qHtml = '<h3>Quiz Questions</h3>';
+                    currentQuizQuestions = qData;
+                    let qHtml = '<h3 style="margin-bottom:10px;">Quiz Questions</h3>';
+
                     qData.forEach((q, idx) => {
-                         qHtml += `<div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:10px;">
-                                    <b>${idx+1}. ${q.question}</b><br>
-                                    <span style="color:#555">Answer: ${q.answer}</span>
-                                    </div>`;
+                        const type = (q.type || 'mcq').toLowerCase();
+                        if (type === 'mcq') quizHasMcq = true;
+                        if (type === 'open') quizHasOpen = true;
+
+                        qHtml += `<div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                                    <b>${idx+1}. ${q.question}</b>`;
+
+                        if (type === 'mcq' && Array.isArray(q.options)) {
+                            qHtml += `<div style="margin-top:8px;">`;
+                            q.options.forEach((opt, oIdx) => {
+                                qHtml += `
+                                    <label style="display:block; margin-bottom:4px;">
+                                        <input type="radio" name="quiz_q${idx}" value="${oIdx}" style="margin-right:6px;">
+                                        ${opt}
+                                    </label>`;
+                            });
+                            qHtml += `</div>`;
+                        } else {
+                            qHtml += `
+                                <div style="margin-top:8px;">
+                                    <textarea id="quiz_q${idx}_open" placeholder="Your answer..." style="width:100%; min-height:60px; padding:6px 8px;"></textarea>
+                                </div>`;
+                        }
+
+                        qHtml += `</div>`;
                     });
+
                     quizDiv.innerHTML = qHtml;
                 }
-            } else if (item.file_name) {
-                quizDiv.style.display = 'block';
-                quizDiv.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Attached: <b>${item.file_name}</b>`;
             } else {
-                quizDiv.style.display = 'none';
+                // NOT A QUIZ: show attachments / hide quiz box
+                quizDiv.style.display = 'block';
+                if (item.file_name) {
+                    quizDiv.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Attached: <b>${item.file_name}</b>`;
+                } else {
+                    quizDiv.style.display = 'none';
+                    quizDiv.innerHTML = '';
+                }
+                fileBox.style.display = 'block';
             }
 
             document.getElementById('assignmentModal').style.display = 'flex';
@@ -568,6 +614,10 @@
         }
 
         async function submitAssignment() {
+            if (currentOpenItem && currentOpenItem.type === 'quiz') {
+                return submitQuiz(); // NEW: quiz flow
+            }
+
             const btn = document.getElementById('btnMarkDone');
             const fileInput = document.getElementById('submitFile');
             const commentInput = document.getElementById('submissionComment');
@@ -577,7 +627,6 @@
 
             try {
                 let fileUrl = null;
-                // Check if file is selected for upload
                 if (fileInput.files.length > 0) {
                     const file = fileInput.files[0];
                     const filePath = `${currentUser.id}/${currentOpenItem.id}/${Date.now()}_${file.name}`;
@@ -596,7 +645,7 @@
                     classwork_id: currentOpenItem.id,
                     status: 'submitted',
                     content: commentInput.value,
-                    grade: null // Reset grade on resubmission
+                    grade: null
                 };
                 if (fileUrl) payload.file_url = fileUrl;
 
@@ -611,6 +660,90 @@
                 alert("Error submitting: " + e.message);
             } finally {
                 btn.innerText = "Mark as Done"; 
+                btn.disabled = false;
+            }
+        }
+
+        // --- QUIZ SUBMISSION + AUTO GRADING (NEW) ---
+        async function submitQuiz() {
+            const btn = document.getElementById('btnMarkDone');
+            const commentInput = document.getElementById('submissionComment');
+
+            if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
+                alert("No quiz questions loaded.");
+                return;
+            }
+
+            btn.innerText = "Submitting Quiz...";
+            btn.disabled = true;
+
+            try {
+                let totalMcq = 0;
+                let correctMcq = 0;
+                let openAnswersSummary = "";
+
+                currentQuizQuestions.forEach((q, idx) => {
+                    const type = (q.type || 'mcq').toLowerCase();
+
+                    if (type === 'mcq') {
+                        totalMcq++;
+                        const selected = document.querySelector(`input[name="quiz_q${idx}"]:checked`);
+                        if (!selected) {
+                            throw new Error(`Please answer question ${idx+1}.`);
+                        }
+                        const optIndex = parseInt(selected.value, 10);
+                        const chosenText = (q.options && q.options[optIndex]) ? q.options[optIndex] : "";
+                        if (chosenText.trim() === (q.answer || "").trim()) {
+                            correctMcq++;
+                        }
+                    } else {
+                        const openEl = document.getElementById(`quiz_q${idx}_open`);
+                        const ans = openEl ? openEl.value.trim() : '';
+                        openAnswersSummary += `Q${idx+1} (open): ${ans}\n`;
+                    }
+                });
+
+                let gradeVal = null;
+                let statusVal = 'submitted';
+                let contentVal = commentInput.value || '';
+
+                if (totalMcq > 0) {
+                    gradeVal = Math.round((correctMcq / totalMcq) * 100);
+                    statusVal = 'graded';
+                    const scoreSummary = `Auto-graded quiz: ${correctMcq}/${totalMcq} (${gradeVal}%)`;
+                    contentVal = contentVal ? (scoreSummary + "\n\n" + contentVal) : scoreSummary;
+                }
+
+                if (openAnswersSummary.trim() !== "") {
+                    contentVal += (contentVal ? "\n\n" : "") + "Open-ended answers:\n" + openAnswersSummary;
+                }
+
+                const payload = {
+                    student_id: currentUser.id,
+                    classwork_id: currentOpenItem.id,
+                    status: statusVal,
+                    content: contentVal,
+                    grade: gradeVal
+                };
+
+                const { error } = await _supabase.from('submissions')
+                    .upsert(payload, { onConflict: 'student_id, classwork_id' });
+
+                if (error) throw error;
+
+                if (gradeVal !== null) {
+                    alert(`Quiz submitted! You scored ${correctMcq}/${totalMcq} (${gradeVal}%).`);
+                } else {
+                    alert("Quiz answers submitted! Your teacher will grade your open-ended responses.");
+                }
+
+                closeAssignmentModal();
+
+            } catch (e) {
+                console.error(e);
+                alert("Error submitting quiz: " + e.message);
+            } finally {
+                btn.innerText = "Submit Quiz";
                 btn.disabled = false;
             }
         }

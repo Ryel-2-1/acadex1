@@ -1,7 +1,6 @@
 <?php
 session_start();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,7 +93,7 @@ session_start();
     .modal-body { padding: 24px; overflow-y: auto; }
     .input-group { margin-bottom: 15px; }
     .input-group label { display: block; font-weight: 500; margin-bottom: 5px; }
-    .input-group input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .input-group input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
     .modal-footer { padding: 15px 24px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; }
     .btn-cancel { background: white; border: 1px solid #ddd; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
     .btn-go { background: #1a73e8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
@@ -119,174 +118,223 @@ session_start();
 
     #detailView { display: none; }
     #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
+
+    /* upload area (for AI pdf upload) */
+    .upload-area-small {
+        border: 2px dashed #c4c4c4;
+        border-radius: 6px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        background: #fafafa;
+        font-size: 14px;
+        color: #666;
+    }
+    .upload-area-small i {
+        margin-right: 6px;
+    }
 </style>
 </head>
 <body>
 
-    <div id="global-loader">Loading...</div>
+<div id="global-loader">Loading...</div>
 
-    <header>
-        <div class="logo-section" onclick="window.location.href='Dashboard.php'">
-            <i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span>
+<header>
+    <div class="logo-section" onclick="window.location.href='Dashboard.php'">
+        <i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span>
+    </div>
+    <nav class="nav-links">
+        <a href="Dashboard.php" class="nav-item">Dashboard</a>
+        <a href="Classwork.php" id="nav-classes" class="nav-item active">Classes</a>
+        <a href="gradebook.php" class="nav-item">Gradebook</a>
+    </nav>
+    <div class="profile-section">
+        <div style="text-align:right;">
+            <h4 id="profile-name" style="margin:0; font-size:14px;">Loading...</h4>
+            <span style="font-size:12px; color:#777;">Teacher</span>
         </div>
-        <nav class="nav-links">
-            <a href="Dashboard.php" class="nav-item">Dashboard</a>
-            <a href="Classwork.php" id="nav-classes" class="nav-item active">Classes</a>
-            <a href="gradebook.php" class="nav-item">Gradebook</a>
-        </nav>
-        <div class="profile-section">
-            <div style="text-align:right;">
-                <h4 id="profile-name" style="margin:0; font-size:14px;">Loading...</h4>
-                <span style="font-size:12px; color:#777;">Teacher</span>
-            </div>
-            <div class="avatar" id="profile-avatar"></div>
-            <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+        <div class="avatar" id="profile-avatar"></div>
+        <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+</header>
+
+<div class="app-layout">
+    <aside class="sidebar">
+        <div id="sidebar-all-classes">
+            <div class="sidebar-item active"><i class="fa-solid fa-list"></i> All Classes</div>
         </div>
-    </header>
+        <div id="sidebar-single-class" style="display:none;">
+            <div class="sidebar-item" onclick="showAllClasses()"><i class="fa-solid fa-arrow-left"></i> Back to All</div>
+            <div class="sidebar-item active" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
+            <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
+            <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
+        </div>
+    </aside>
 
-    <div class="app-layout">
-        <aside class="sidebar">
-            <div id="sidebar-all-classes">
-                <div class="sidebar-item active"><i class="fa-solid fa-list"></i> All Classes</div>
+    <main class="main-content">
+        <div id="view-all-classes" class="section-view active-section">
+            <div class="action-header">
+                <h2>My Classes</h2>
+                <button class="create-btn" onclick="openClassModal()"><i class="fa-solid fa-plus"></i> Create Class</button>
             </div>
-            <div id="sidebar-single-class" style="display:none;">
-                <div class="sidebar-item" onclick="showAllClasses()"><i class="fa-solid fa-arrow-left"></i> Back to All</div>
-                <div class="sidebar-item active" id="tab-stream" onclick="switchTab('stream')"><i class="fa-regular fa-comment-dots"></i> Stream</div>
-                <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
-                <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
-            </div>
-        </aside>
+            <div id="loadingMsg" style="text-align:center; padding:40px; color:#777;">Loading classes...</div>
+            <div class="class-grid" id="classGrid"></div>
+        </div>
 
-        <main class="main-content">
-            <div id="view-all-classes" class="section-view active-section">
-                <div class="action-header">
-                    <h2>My Classes</h2>
-                    <button class="create-btn" onclick="openClassModal()"><i class="fa-solid fa-plus"></i> Create Class</button>
-                </div>
-                <div id="loadingMsg" style="text-align:center; padding:40px; color:#777;">Loading classes...</div>
-                <div class="class-grid" id="classGrid"></div>
-            </div>
-
-            <div id="view-single-class" class="section-view">
-                <div id="streamSection" class="active-tab-content">
-                    <div class="class-banner">
-                        <div class="class-code-box">
-                            <span class="code-label">Class Code</span>
-                            <div class="code-val-row">
-                                <span class="code-text" id="bannerCode">...</span>
-                                <i class="fa-regular fa-copy copy-icon" onclick="copyCode()" title="Copy Code"></i>
-                            </div>
-                        </div>
-                        <div class="class-banner-content">
-                            <div>
-                                <h1 id="bannerTitle">Loading...</h1>
-                                <p id="bannerSubtitle">...</p>
-                            </div>
-                            <button class="virtual-btn" onclick="startMeeting()">
-                                <i class="fa-solid fa-video"></i> Virtual Class
-                            </button>
+        <div id="view-single-class" class="section-view">
+            <div id="streamSection" class="active-tab-content">
+                <div class="class-banner">
+                    <div class="class-code-box">
+                        <span class="code-label">Class Code</span>
+                        <div class="code-val-row">
+                            <span class="code-text" id="bannerCode">...</span>
+                            <i class="fa-regular fa-copy copy-icon" onclick="copyCode()" title="Copy Code"></i>
                         </div>
                     </div>
-                    <div id="streamFeedArea" style="margin-top:30px;">Loading stream...</div>
-                </div>
-
-                <div id="classworkSection" class="active-tab-content" style="display:none;">
-                    <div id="streamListView">
-                        <div class="action-header">
-                            <h2>Classwork</h2>
-                            <div style="position: relative;">
-                                <button class="create-btn" onclick="toggleDropdown()"><i class="fa-solid fa-plus"></i> Create</button>
-                                <div id="createDropdown" class="dropdown-menu">
-                                    <div class="dropdown-item" onclick="openAssignModal()"><i class="fa-solid fa-file-pen"></i> Assignment</div>
-                                    <div class="dropdown-item" onclick="openAiModal()"><i class="fa-solid fa-robot"></i> AI Quiz Generator</div>
-                                </div>
-                            </div>
+                    <div class="class-banner-content">
+                        <div>
+                            <h1 id="bannerTitle">Loading...</h1>
+                            <p id="bannerSubtitle">...</p>
                         </div>
-                        <div id="streamItemsArea"></div>
-                    </div>
-                    <div id="detailView">
-                        <button style="background:none; border:none; cursor:pointer; color:#1a73e8; margin-bottom:15px; font-size:16px; display:flex; align-items:center; gap:5px;" onclick="closeDetail()">
-                            <i class="fa-solid fa-arrow-left"></i> Back to list
+                        <button class="virtual-btn" onclick="startMeeting()">
+                            <i class="fa-solid fa-video"></i> Virtual Class
                         </button>
-                        <div style="background:white; padding:30px; border-radius:8px; border:1px solid #ddd;">
-                            <h2 id="detTitle" style="margin-top:0; color:#1a73e8;"></h2>
-                            <div id="detBody"></div>
-                        </div>
                     </div>
                 </div>
+                <div id="streamFeedArea" style="margin-top:30px;">Loading stream...</div>
+            </div>
 
-                <div id="peopleSection" class="active-tab-content" style="display:none; max-width: 800px; margin: 0 auto;">
-                    <div id="teacherListArea"></div>
-                    <div id="studentListArea" style="margin-top: 30px;"></div>
+            <div id="classworkSection" class="active-tab-content" style="display:none;">
+                <div id="streamListView">
+                    <div class="action-header">
+                        <h2>Classwork</h2>
+                        <div style="position: relative;">
+                            <button class="create-btn" onclick="toggleDropdown()"><i class="fa-solid fa-plus"></i> Create</button>
+                            <div id="createDropdown" class="dropdown-menu">
+                                <div class="dropdown-item" onclick="openAssignModal()"><i class="fa-solid fa-file-pen"></i> Assignment</div>
+                                <div class="dropdown-item" onclick="openAiModal()"><i class="fa-solid fa-robot"></i> AI Quiz Generator</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="streamItemsArea"></div>
+                </div>
+                <div id="detailView">
+                    <button style="background:none; border:none; cursor:pointer; color:#1a73e8; margin-bottom:15px; font-size:16px; display:flex; align-items:center; gap:5px;" onclick="closeDetail()">
+                        <i class="fa-solid fa-arrow-left"></i> Back to list
+                    </button>
+                    <div style="background:white; padding:30px; border-radius:8px; border:1px solid #ddd;">
+                        <h2 id="detTitle" style="margin-top:0; color:#1a73e8;"></h2>
+                        <div id="detBody"></div>
+                    </div>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <div id="createClassModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h2>Create New Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
-            <div class="modal-body">
-                <div class="input-group"><label>Class Name</label><input type="text" id="newClassName"></div>
-                <div class="input-group"><label>Section</label><input type="text" id="newClassSection"></div>
-            </div>
-            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createClass()">Create</button></div>
-        </div>
-    </div>
-
-    <div id="assignModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h2>New Assignment</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
-            <div class="modal-body">
-                <div class="input-group"><label>Title</label><input type="text" id="asTitle"></div>
-                <div class="input-group"><label>Instructions</label><textarea id="asInstr"></textarea></div>
-                <div class="input-group"><label>Due Date</label><input type="datetime-local" id="asDueDate"></div>
-            </div>
-            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createAssign()">Assign</button></div>
-        </div>
-    </div>
-
-    <div id="aiModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h2>Generate Quiz</h2><span style="cursor:pointer" onclick="closeAllModals()">&times;</span></div>
-            <div class="modal-body">
-                <div class="upload-area-small" onclick="document.getElementById('aiFile').click()">
-                    <input type="file" id="aiFile" hidden accept="application/pdf" onchange="showFile(this, 'aiFileTxt')">
-                    <span id="aiFileTxt"><i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF</span>
-                </div>
-                <div class="input-group" style="margin-top:20px;">
-                    <label>Instructions for AI</label>
-                    <textarea id="aiPrompt" placeholder="e.g. Generate 5 difficult questions about Chapter 3..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button></div>
-        </div>
-    </div>
-
-    <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
-        <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
-            <div class="modal-header">
-                <h2 id="jitsiTitle">Virtual Class</h2>
-                <button class="btn-cancel" onclick="closeJitsi()">Close Meeting</button>
-            </div>
-            <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
-        </div>
-    </div>
-
-    <div id="gradingModal" class="modal-overlay">
-        <div class="modal-content grading-modal">
-            <div class="modal-header">
-                <h2 id="gradingTitle">Submissions</h2>
-                <span style="cursor:pointer" onclick="closeGradingModal()">&times;</span>
-            </div>
-            <div class="modal-body" id="gradingList">
-                <p style="text-align:center; color:#777;">Loading...</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeGradingModal()">Close</button>
+            <div id="peopleSection" class="active-tab-content" style="display:none; max-width: 800px; margin: 0 auto;">
+                <div id="teacherListArea"></div>
+                <div id="studentListArea" style="margin-top: 30px;"></div>
             </div>
         </div>
+    </main>
+</div>
+
+<!-- Create Class Modal -->
+<div id="createClassModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header"><h2>Create New Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
+        <div class="modal-body">
+            <div class="input-group"><label>Class Name</label><input type="text" id="newClassName"></div>
+            <div class="input-group"><label>Section</label><input type="text" id="newClassSection"></div>
+        </div>
+        <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createClass()">Create</button></div>
     </div>
+</div>
+
+<!-- New Assignment Modal -->
+<div id="assignModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header"><h2>New Assignment</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
+        <div class="modal-body">
+            <div class="input-group"><label>Title</label><input type="text" id="asTitle"></div>
+            <div class="input-group"><label>Instructions</label><textarea id="asInstr"></textarea></div>
+            <div class="input-group"><label>Due Date</label><input type="datetime-local" id="asDueDate"></div>
+        </div>
+        <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createAssign()">Assign</button></div>
+    </div>
+</div>
+
+<!-- AI Quiz Generator Modal (updated with question type) -->
+<div id="aiModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header"><h2>Generate Quiz</h2><span style="cursor:pointer" onclick="closeAllModals()">&times;</span></div>
+        <div class="modal-body">
+            <div class="upload-area-small" onclick="document.getElementById('aiFile').click()">
+                <input type="file" id="aiFile" hidden accept="application/pdf" onchange="showFile(this, 'aiFileTxt')">
+                <span id="aiFileTxt"><i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF</span>
+            </div>
+
+            <div class="input-group" style="margin-top:20px;">
+                <label>Question Type</label>
+                <select id="aiQuestionType">
+                    <option value="mcq">Multiple Choice (4 options)</option>
+                    <option value="open">Open-ended (short answer)</option>
+                </select>
+            </div>
+
+            <div class="input-group" style="margin-top:20px;">
+                <label>Instructions for AI</label>
+                <textarea id="aiPrompt" placeholder="e.g. Focus on Chapter 3: Binary Trees..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAllModals()">Cancel</button>
+            <button class="btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button>
+        </div>
+    </div>
+</div>
+
+<!-- Jitsi Modal -->
+<div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
+    <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
+        <div class="modal-header">
+            <h2 id="jitsiTitle">Virtual Class</h2>
+            <button class="btn-cancel" onclick="closeJitsi()">Close Meeting</button>
+        </div>
+        <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
+    </div>
+</div>
+
+<!-- Grading Modal -->
+<div id="gradingModal" class="modal-overlay">
+    <div class="modal-content grading-modal">
+        <div class="modal-header">
+            <h2 id="gradingTitle">Submissions</h2>
+            <span style="cursor:pointer" onclick="closeGradingModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="gradingList">
+            <p style="text-align:center; color:#777;">Loading...</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeGradingModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Editor Modal (NEW) -->
+<div id="quizEditorModal" class="modal-overlay">
+    <div class="modal-content grading-modal">
+        <div class="modal-header">
+            <h2 id="quizEditorTitle">Edit Generated Quiz</h2>
+            <span style="cursor:pointer" onclick="closeQuizEditor()">&times;</span>
+        </div>
+        <div class="modal-body" id="quizEditorList" style="max-height:60vh; overflow-y:auto;">
+            <!-- dynamic -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeQuizEditor()">Cancel</button>
+            <button class="btn-go" onclick="saveEditedQuiz()">Save Quiz</button>
+        </div>
+    </div>
+</div>
 
 <script>
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
@@ -297,6 +345,10 @@ session_start();
     let currentClassId = null;
     let userFullName = "Teacher"; 
     let jitsiApi = null;
+
+    // NEW: store latest generated quiz for editing
+    let latestGeneratedQuestions = [];
+    let latestQuizFileName = '';
 
     try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
     catch (e) { console.error(e); }
@@ -413,7 +465,20 @@ session_start();
             if (Array.isArray(questions)) {
                 content += `<div style="margin-top:20px;">`;
                 questions.forEach((q, i) => {
-                    content += `<div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;"><div style="font-weight:600;">${i+1}. ${q.question}</div><div style="margin-top:10px; color:#137333;">Answer: ${q.answer}</div></div>`;
+                    const isMcq = (q.type || 'mcq') === 'mcq';
+                    content += `
+                        <div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;">
+                            <div style="font-weight:600;">${i+1}. ${q.question}</div>
+                    `;
+                    if (isMcq && Array.isArray(q.options) && q.options.length) {
+                        content += `<ul style="margin-top:8px; padding-left:20px;">`;
+                        q.options.forEach(opt => {
+                            const bold = (opt === q.answer) ? 'font-weight:600; color:#137333;' : '';
+                            content += `<li style="${bold}">${opt}</li>`;
+                        });
+                        content += `</ul>`;
+                    }
+                    content += `<div style="margin-top:10px; color:#137333;">Answer: ${q.answer || '(no answer set)'}</div></div>`;
                 });
                 content += `</div>`;
             }
@@ -426,9 +491,8 @@ session_start();
         document.getElementById('streamListView').style.display = 'block';
     }
 
-    // --- SEPARATED GRADING FUNCTIONS (New) ---
+    // --- SEPARATED GRADING FUNCTIONS ---
     async function fetchSubmissionsForClasswork(classworkId) {
-        // Fetch all submissions + student names
         const { data: submissions, error } = await supabaseClient
             .from('submissions')
             .select(`*, student:profiles ( full_name, email )`)
@@ -440,7 +504,6 @@ session_start();
             return { toGrade: [], graded: [] };
         }
 
-        // Filter into two lists
         const graded = submissions.filter(sub => sub.status === 'graded');
         const toGrade = submissions.filter(sub => sub.status !== 'graded');
         return { toGrade, graded };
@@ -451,10 +514,8 @@ session_start();
         document.getElementById('gradingTitle').innerText = "Submissions: " + title;
         document.getElementById('gradingList').innerHTML = '<p style="text-align:center;">Loading submissions...</p>';
 
-        // 1. Fetch
         const { toGrade, graded } = await fetchSubmissionsForClasswork(classworkId);
 
-        // 2. Render
         renderSeparatedSubmissions(toGrade, graded);
     }
 
@@ -520,7 +581,6 @@ session_start();
         btn.innerText = "Saving...";
         btn.disabled = true;
 
-        // Update ONLY the submissions table
         const { error } = await supabaseClient
             .from('submissions')
             .update({ grade: val, status: 'graded' })
@@ -535,42 +595,32 @@ session_start();
             btn.innerText = "Saved!";
             btn.style.backgroundColor = "#137333"; 
             setTimeout(() => {
-                // Refresh modal to move the student to the "Graded" section
-                // We find the 'onclick' attribute of the View Submissions button to get the title again
-                // Or simpler: just close and let user re-open, OR trigger a refresh.
-                // For simplicity here, we just reset the button.
                 btn.innerText = "Return Grade";
                 btn.style.backgroundColor = "#1a73e8"; 
                 btn.disabled = false;
-                
-                // Optional: Close modal so user sees the list update next time
-                // closeGradingModal();
             }, 1000);
         }
     }
 
     function closeGradingModal() { document.getElementById('gradingModal').style.display = 'none'; }
 
-    // Open the Create Class modal (was missing)
+    // Open the Create Class modal
     function openClassModal() {
-        // Reset inputs
         const nameEl = document.getElementById('newClassName');
         const sectionEl = document.getElementById('newClassSection');
         if (nameEl) { nameEl.value = ''; nameEl.focus(); }
         if (sectionEl) sectionEl.value = '';
 
-        // Show modal (use flex for centering like other modals)
         const modal = document.getElementById('createClassModal');
         if (modal) modal.style.display = 'flex';
     }
     
-   async function createClass() {
+    async function createClass() {
         const title = document.getElementById('newClassName').value;
         const section = document.getElementById('newClassSection').value;
         
         if (!title) return alert("Class Name is required");
         
-        // 1. Disable button to prevent double-clicks
         const btn = document.querySelector('#createClassModal .btn-go');
         const oldText = btn.innerText;
         btn.innerText = "Creating...";
@@ -579,7 +629,6 @@ session_start();
         try {
             const code = Math.random().toString(36).substring(2, 9).toUpperCase();
 
-            // 2. Insert and CHECK for error
             const { data, error } = await supabaseClient
                 .from('classes')
                 .insert([{ 
@@ -592,9 +641,8 @@ session_start();
 
             if (error) {
                 console.error("Supabase Error:", error);
-                alert("Failed to create class: " + error.message + "\n\n(Hint: You probably need to run the SQL policies below)");
+                alert("Failed to create class: " + error.message);
             } else {
-                // Success!
                 closeAllModals();
                 fetchClasses();
             }
@@ -602,42 +650,247 @@ session_start();
             console.error("Unexpected Error:", err);
             alert("Unexpected error: " + err.message);
         } finally {
-            // Reset button
             btn.innerText = oldText;
             btn.disabled = false;
         }
     }
+
     async function createAssign() {
         const title = document.getElementById('asTitle').value;
         const desc = document.getElementById('asInstr').value;
         const due = document.getElementById('asDueDate').value;
         if(!title) return alert("Required");
-        await supabaseClient.from('classwork').insert([{ teacher_id: currentUser.id, class_id: currentClassId, type: 'assignment', title, description: desc, due_date: due ? new Date(due).toISOString() : null }]);
+        await supabaseClient.from('classwork').insert([{ 
+            teacher_id: currentUser.id, 
+            class_id: currentClassId, 
+            type: 'assignment', 
+            title, 
+            description: desc, 
+            due_date: due ? new Date(due).toISOString() : null 
+        }]);
         closeAllModals();
         fetchClasswork();
     }
 
+    // UPDATED: Generate Quiz using AI and open editor
     async function generateQuiz() {
         const file = document.getElementById('aiFile').files[0];
         const prompt = document.getElementById('aiPrompt').value;
+        const qType = document.getElementById('aiQuestionType').value || 'mcq';
         const btn = document.getElementById('aiBtn');
-        if(!file) return alert("Upload PDF");
-        
-        btn.innerText = "Generating..."; btn.disabled = true;
+
+        if (!file) {
+            return alert("Upload PDF");
+        }
+
+        btn.innerText = "Generating...";
+        btn.disabled = true;
+
         try {
             const fd = new FormData();
             fd.append('pdf_file', file);
             fd.append('custom_prompt', prompt);
+            fd.append('question_type', qType);
+
             const res = await fetch('api/generate_quiz_api.php', { method:'POST', body:fd });
             const result = await res.json();
             
             if(result.success) {
-                await supabaseClient.from('classwork').insert([{ teacher_id: currentUser.id, class_id: currentClassId, type: 'quiz', title: 'Quiz: ' + file.name, description: 'AI Generated', file_name: file.name, quiz_data: result.questions }]);
-                closeAllModals();
+                latestGeneratedQuestions = Array.isArray(result.questions) ? result.questions : [];
+                latestQuizFileName = file.name;
+
+                if (latestGeneratedQuestions.length === 0) {
+                    alert("AI did not return any questions.");
+                } else {
+                    closeAllModals();
+                    openQuizEditor();
+                }
+            } else {
+                alert(result.message || "Error from AI");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Error generating quiz");
+        }
+        finally {
+            btn.innerText = "Generate";
+            btn.disabled = false;
+        }
+    }
+
+    // --- QUIZ EDITOR FUNCTIONS (NEW) ---
+    function openQuizEditor() {
+        const modal = document.getElementById('quizEditorModal');
+        const list = document.getElementById('quizEditorList');
+        const qTypeDefault = document.getElementById('aiQuestionType').value || 'mcq';
+
+        document.getElementById('quizEditorTitle').innerText = "Edit Generated Quiz";
+
+        list.innerHTML = '';
+
+        latestGeneratedQuestions.forEach((q, idx) => {
+            const type = (q.type || qTypeDefault || 'mcq').toLowerCase();
+            const options = Array.isArray(q.options) ? q.options : [];
+
+            const safeQuestion = q.question || '';
+            const safeAnswer = q.answer || '';
+
+            let optionsHtml = '';
+            for (let i = 0; i < 4; i++) {
+                const optVal = options[i] || '';
+                const isCorrect = (optVal && optVal === safeAnswer);
+                optionsHtml += `
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                        <input type="radio" name="q${idx}-correct" value="${i}" ${isCorrect ? 'checked' : ''}>
+                        <input type="text" class="opt-input" data-q="${idx}" data-opt="${i}" value="${optVal}" placeholder="Option ${String.fromCharCode(65+i)}" style="flex:1; padding:6px 8px;">
+                    </div>
+                `;
+            }
+
+            const isMcq = type === 'mcq';
+
+            const block = document.createElement('div');
+            block.className = 'quiz-question-edit';
+            block.setAttribute('data-index', idx);
+
+            block.style.border = '1px solid #e0e0e0';
+            block.style.borderRadius = '8px';
+            block.style.padding = '12px 15px';
+            block.style.marginBottom = '12px';
+            block.style.background = '#fff';
+
+            block.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:600; color:#3c4043;">Question ${idx + 1}</div>
+                    <select class="qe-type" data-index="${idx}">
+                        <option value="mcq" ${isMcq ? 'selected' : ''}>Multiple Choice</option>
+                        <option value="open" ${!isMcq ? 'selected' : ''}>Open-ended</option>
+                    </select>
+                </div>
+                <textarea class="qe-question" placeholder="Question text..." style="width:100%; min-height:60px; padding:6px 8px; margin-bottom:8px;">${safeQuestion}</textarea>
+
+                <div class="qe-mcq-section" style="${isMcq ? '' : 'display:none;'}; margin-bottom:8px;">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:5px;">Options (select correct answer):</div>
+                    ${optionsHtml}
+                </div>
+
+                <div class="qe-open-section" style="${!isMcq ? '' : 'display:none;'}; margin-bottom:8px;">
+                    <label style="font-size:13px; font-weight:600; display:block; margin-bottom:4px;">Model Answer / Key Points</label>
+                    <textarea class="qe-answer-open" style="width:100%; min-height:50px; padding:6px 8px;">${isMcq ? '' : safeAnswer}</textarea>
+                </div>
+            `;
+
+            list.appendChild(block);
+        });
+
+        // delegate: toggle MCQ/Open sections
+        list.addEventListener('change', function(e) {
+            if (e.target.classList.contains('qe-type')) {
+                const idx = e.target.getAttribute('data-index');
+                const parent = list.querySelector(`.quiz-question-edit[data-index="${idx}"]`);
+                if (!parent) return;
+                const mcqSection = parent.querySelector('.qe-mcq-section');
+                const openSection = parent.querySelector('.qe-open-section');
+
+                if (e.target.value === 'mcq') {
+                    mcqSection.style.display = '';
+                    openSection.style.display = 'none';
+                } else {
+                    mcqSection.style.display = 'none';
+                    openSection.style.display = '';
+                }
+            }
+        });
+
+        modal.style.display = 'flex';
+    }
+
+    function closeQuizEditor() {
+        document.getElementById('quizEditorModal').style.display = 'none';
+    }
+
+    async function saveEditedQuiz() {
+        const container = document.getElementById('quizEditorList');
+        const blocks = container.querySelectorAll('.quiz-question-edit');
+
+        if (blocks.length === 0) {
+            alert("No questions to save.");
+            return;
+        }
+
+        const finalQuestions = [];
+
+        blocks.forEach(block => {
+            const idx = block.getAttribute('data-index');
+            const typeSel = block.querySelector('.qe-type');
+            const qTextEl = block.querySelector('.qe-question');
+            const isMcq = typeSel.value === 'mcq';
+
+            const questionText = qTextEl.value.trim();
+            if (!questionText) return;
+
+            let options = [];
+            let answer = '';
+
+            if (isMcq) {
+                const optInputs = block.querySelectorAll('.opt-input');
+                optInputs.forEach((inp, i) => {
+                    options[i] = inp.value.trim();
+                });
+
+                const checkedRadio = block.querySelector(`input[type="radio"][name="q${idx}-correct"]:checked`);
+                if (checkedRadio) {
+                    const correctIndex = parseInt(checkedRadio.value, 10);
+                    if (!isNaN(correctIndex) && options[correctIndex]) {
+                        answer = options[correctIndex];
+                    }
+                }
+            } else {
+                const ansOpen = block.querySelector('.qe-answer-open');
+                answer = ansOpen ? ansOpen.value.trim() : '';
+                options = [];
+            }
+
+            finalQuestions.push({
+                type: isMcq ? 'mcq' : 'open',
+                question: questionText,
+                options: options,
+                answer: answer
+            });
+        });
+
+        if (finalQuestions.length === 0) {
+            alert("All questions are empty. Nothing to save.");
+            return;
+        }
+
+        try {
+            const title = 'Quiz: ' + (latestQuizFileName || 'AI Generated');
+            const desc = 'AI Generated & Edited';
+
+            const { error } = await supabaseClient
+                .from('classwork')
+                .insert([{
+                    teacher_id: currentUser.id,
+                    class_id: currentClassId,
+                    type: 'quiz',
+                    title: title,
+                    description: desc,
+                    file_name: latestQuizFileName || null,
+                    quiz_data: finalQuestions
+                }]);
+
+            if (error) {
+                console.error(error);
+                alert("Error saving quiz: " + error.message);
+            } else {
+                closeQuizEditor();
                 fetchClasswork();
-            } else { alert(result.message); }
-        } catch(e) { alert("Error generating quiz"); }
-        finally { btn.innerText = "Generate"; btn.disabled = false; }
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Unexpected error saving quiz");
+        }
     }
 
     // --- HELPERS ---
@@ -681,6 +934,30 @@ session_start();
     function copyCode() { navigator.clipboard.writeText(document.getElementById('bannerCode').innerText); alert("Copied!"); }
     async function handleLogout() { if(confirm("Log out?")) { await supabaseClient.auth.signOut(); window.location.href = 'teacher_login.php'; } }
     
+    function openAssignModal() {
+        closeAllModals();
+        const modal = document.getElementById('assignModal');
+        if (!modal) return;
+        const t = document.getElementById('asTitle'); if (t) t.value = '';
+        const instr = document.getElementById('asInstr'); if (instr) instr.value = '';
+        const due = document.getElementById('asDueDate'); if (due) due.value = '';
+        const dd = document.getElementById('createDropdown'); if (dd) dd.style.display = 'none';
+        modal.style.display = 'flex';
+        if (t) t.focus();
+    }
+
+    function openAiModal() {
+        closeAllModals();
+        const modal = document.getElementById('aiModal');
+        if (!modal) return;
+        const file = document.getElementById('aiFile'); if (file) file.value = '';
+        const fileTxt = document.getElementById('aiFileTxt'); if (fileTxt) fileTxt.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF`;
+        const prompt = document.getElementById('aiPrompt'); if (prompt) prompt.value = '';
+        const dd = document.getElementById('createDropdown'); if (dd) dd.style.display = 'none';
+        modal.style.display = 'flex';
+        if (prompt) prompt.focus();
+    }
+
     function switchTab(tab) {
         document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
         document.getElementById('tab-'+tab).classList.add('active');
@@ -715,7 +992,7 @@ session_start();
         studentArea.innerHTML = sHtml;
     }
 
-    // add deterministic gradient generator for thumbnails
+    // gradient generator
     function pickGradient(seed) {
         if (!seed) seed = Math.random().toString();
         let hash = 0;

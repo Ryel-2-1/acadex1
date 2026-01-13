@@ -16,7 +16,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Smalot\PdfParser\Parser;
 
 // YOUR API KEY
-$apiKey = "AIzaSyD00nlx0Ph8djusICAjE6e2BA-hxyALtlk"; 
+$apiKey = "AIzaSyA0xasD0i3pzgnebqW6nr_UG1msZ2E-DCU"; 
 
 try {
     if (!isset($_FILES['pdf_file'])) { throw new Exception("No file uploaded"); }
