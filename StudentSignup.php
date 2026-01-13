@@ -9,39 +9,154 @@
     
     <style>
         /* --- General Reset --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         /* --- Card --- */
-        .portal-card { background: white; width: 450px; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; }
-        .icon-header { color: #00c853; font-size: 48px; margin-bottom: 10px; }
-        h1 { color: #000; font-size: 28px; font-weight: 700; margin-bottom: 5px; }
-        .subtitle { color: #333; font-size: 14px; margin-bottom: 30px; }
+        .portal-card {
+            background: white;
+            width: 450px;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .icon-header {
+            color: #00c853;
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #000;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
 
         /* --- Form --- */
-        .form-group { text-align: left; margin-bottom: 20px; }
-        .input-label { display: block; font-size: 14px; color: #000; margin-bottom: 8px; font-weight: 400; }
-        .input-wrapper { position: relative; }
-        .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 16px; }
-        .form-input { width: 100%; padding: 12px 12px 12px 40px; font-size: 14px; border: 1px solid #6b7280; border-radius: 6px; outline: none; color: #333; }
-        .form-input:focus { border-color: #00c853; box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.1); }
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .input-label {
+            display: block;
+            font-size: 14px;
+            color: #000;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 16px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            font-size: 14px;
+            border: 1px solid #6b7280;
+            border-radius: 6px;
+            outline: none;
+            color: #333;
+        }
+        .form-input:focus {
+            border-color: #00c853;
+            box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.1);
+        }
 
         /* --- Buttons --- */
-        .btn-signup { width: 100%; padding: 14px; background-color: #00c853; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-bottom: 20px; }
-        .btn-signup:hover { background-color: #009624; }
+        .btn-signup {
+            width: 100%;
+            padding: 14px;
+            background-color: #00c853;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 20px;
+        }
+        .btn-signup:hover {
+            background-color: #009624;
+        }
         
         /* --- Divider --- */
-        .divider-container { display: flex; align-items: center; text-align: center; color: #333; font-size: 14px; margin-bottom: 20px; }
-        .divider-line { flex-grow: 1; border-bottom: 1px solid #e0e0e0; }
-        .divider-text { padding: 0 10px; background: white; }
+        .divider-container {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .divider-line {
+            flex-grow: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .divider-text {
+            padding: 0 10px;
+            background: white;
+        }
         
-        .btn-login { display: block; width: 100%; padding: 12px; background-color: white; color: #000; border: 1px solid #9ca3af; border-radius: 6px; font-size: 16px; text-decoration: none; font-weight: 400; transition: background 0.2s; }
-        .btn-login:hover { background-color: #f9fafb; }
+        .btn-login {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: white;
+            color: #000;
+            border: 1px solid #9ca3af;
+            border-radius: 6px;
+            font-size: 16px;
+            text-decoration: none;
+            font-weight: 400;
+            transition: background 0.2s;
+        }
+        .btn-login:hover {
+            background-color: #f9fafb;
+        }
 
         /* --- Status Messages --- */
-        #api-message { display: none; padding: 10px; margin-bottom: 20px; border-radius: 6px; font-size: 14px; }
-        .success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
-        .error { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        #api-message {
+            display: none;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +173,8 @@
                 <label class="input-label">Full Name</label>
                 <div class="input-wrapper">
                     <i class="fa-regular fa-user input-icon"></i>
-                    <input type="text" id="full_name" class="form-input" placeholder="John Doe" required>
+                    <input type="text" id="full_name" class="form-input"
+                           placeholder="John Doe" required>
                 </div>
             </div>
 
@@ -66,7 +182,8 @@
                 <label class="input-label">Email Address</label>
                 <div class="input-wrapper">
                     <i class="fa-regular fa-envelope input-icon"></i>
-                    <input type="email" id="email" class="form-input" placeholder="Sample@Student.edu" required>
+                    <input type="email" id="email" class="form-input"
+                           placeholder="Sample@Student.edu" required>
                 </div>
             </div>
 
@@ -74,7 +191,8 @@
                 <label class="input-label">Create Password</label>
                 <div class="input-wrapper">
                     <i class="fa-solid fa-lock input-icon"></i>
-                    <input type="password" id="password" class="form-input" placeholder="******************" required>
+                    <input type="password" id="password" class="form-input"
+                           placeholder="******************" required autocomplete="new-password">
                 </div>
             </div>
 
@@ -82,7 +200,8 @@
                 <label class="input-label">Confirm Password</label>
                 <div class="input-wrapper">
                     <i class="fa-solid fa-lock input-icon"></i>
-                    <input type="password" id="confirm-password" class="form-input" placeholder="******************" required>
+                    <input type="password" id="confirm-password" class="form-input"
+                           placeholder="******************" required autocomplete="new-password">
                 </div>
             </div>
 
@@ -98,28 +217,44 @@
         <a href="student_login.php" class="btn-login">Go to Student Login</a>
     </div>
 
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-       // 1. Initialize Supabase Client
-        const supabaseUrl = '<?php echo $_ENV["SUPABASE_URL"]; ?>';
-        const supabaseKey = '<?php echo $_ENV["SUPABASE_KEY"]; ?>';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // 1. Initialize Supabase Client using Azure/.env vars
+        const supabaseUrl = "<?php echo $_ENV['SUPABASE_URL'] ?? ''; ?>";
+        const supabaseKey = "<?php echo $_ENV['SUPABASE_KEY'] ?? ''; ?>";
+        const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        console.log("🔍 Supabase URL (student signup):", supabaseUrl);
+        console.log("🔍 Supabase key length (student signup):", supabaseKey.length);
 
         const signupForm = document.getElementById('signupForm');
         const msgBox = document.getElementById('api-message');
+        const submitBtn = document.getElementById('submitBtn');
 
-        // 2. Main Signup Logic
-        // ... (Initial client setup remains the same)
+        // 2. Helper to show message
+        function showMessage(text, type) {
+            msgBox.textContent = text;
+            msgBox.className = type;
+            msgBox.style.display = 'block';
+        }
 
+        // 3. Main Signup Logic
         signupForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const fullName = document.getElementById('full_name').value;
-            const email = document.getElementById('email').value;
+            const fullName = document.getElementById('full_name').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
-            const submitBtn = document.getElementById('submitBtn');
+
+            msgBox.style.display = 'none';
+
+            if (!fullName || !email || !password || !confirmPassword) {
+                showMessage("Please fill in all fields.", "error");
+                return;
+            }
 
             if (password !== confirmPassword) {
                 showMessage("Passwords do not match.", "error");
@@ -130,7 +265,7 @@
             submitBtn.innerText = "Creating Account...";
 
             try {
-                // STEP A: Sign up user in Supabase Auth (This is where the real security happens)
+                // STEP A: Create user in Supabase Auth
                 const { data: authData, error: authError } = await _supabase.auth.signUp({
                     email: email,
                     password: password,
@@ -139,44 +274,46 @@
                     }
                 });
 
-                if (authError) throw authError;
-
-                // STEP B: Upsert into your 'profiles' table including the password column
-                if (authData.user) {
-                    const { error: profileError } = await _supabase
-                        .from('profiles')
-                        .upsert([
-                            { 
-                                id: authData.user.id, 
-                                full_name: fullName, 
-                                email: email,
-                                password: password, // Storing plain text password (Use caution!)
-                                role: 'student' 
-                            }
-                        ], { onConflict: 'id' });
-
-                    if (profileError) throw profileError;
-
-                    showMessage("Registration successful! Please check your email.", "success");
-                    
-                    setTimeout(() => {
-                        window.location.href = 'student_login.php'; 
-                    }, 3000);
+                if (authError) {
+                    throw authError;
                 }
+
+                if (!authData || !authData.user) {
+                    throw new Error("Sign up failed – no user returned.");
+                }
+
+                const user = authData.user;
+
+                // STEP B: Insert profile row (role = student)
+                const { error: profileError } = await _supabase
+                    .from('profiles')
+                    .insert({
+                        id: user.id,          // must match auth.users.id
+                        full_name: fullName,
+                        email: email,
+                        role: 'student'
+                        // you can have a password column in profiles,
+                        // but avoid storing plain text passwords there
+                    });
+
+                if (profileError) {
+                    console.error("Profile insert error:", profileError);
+                    throw profileError;
+                }
+
+                showMessage("Registration successful! Please check your email and then log in.", "success");
+
+                setTimeout(() => {
+                    window.location.href = 'student_login.php';
+                }, 2500);
 
             } catch (err) {
                 console.error('Signup error:', err);
-                showMessage(err.message || "An error occurred.", "error");
+                showMessage(err.message || "An error occurred while signing up.", "error");
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Sign up";
             }
         });
-
-        function showMessage(text, type) {
-            msgBox.textContent = text;
-            msgBox.className = type; 
-            msgBox.style.display = 'block';
-        }
     </script>
 </body>
 </html>
