@@ -77,6 +77,28 @@
 
         <a href="teacher_login.php" class="btn-login">Go to Teacher Login</a>
     </div>
+<script>
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.querySelector('input[name="email"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+        const confirm = document.querySelector('input[name="confirm_password"]').value;
 
+        if(password !== confirm) return alert("Passwords do not match");
+
+        const res = await fetch('api_auth.php?action=register', {
+            method: 'POST',
+            body: JSON.stringify({ email: email, password: password, role: 'teacher' })
+        });
+        const data = await res.json();
+        
+        if(data.status === 'success') {
+            alert("Account created! Redirecting to login...");
+            window.location.href = 'teacher_login.php';
+        } else {
+            alert(data.message);
+        }
+    });
+</script>
 </body>
 </html>

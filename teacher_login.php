@@ -89,5 +89,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </form>
         </div>
     </div>
+	<script>
+    document.querySelector('form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.querySelector('input[name="email"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+
+        const res = await fetch('api_auth.php?action=login', {
+            method: 'POST',
+            body: JSON.stringify({ email: email, password: password, role: 'teacher' })
+        });
+        const data = await res.json();
+        
+        if(data.status === 'success') {
+            window.location.href = data.redirect;
+        } else {
+            alert(data.message);
+        }
+    });
+</script>
 </body>
 </html>

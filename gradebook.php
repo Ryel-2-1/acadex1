@@ -124,9 +124,9 @@ session_start();
                 <span id="saveStatus" class="saving-status"><i class="fa-solid fa-spinner fa-spin"></i> Saving...</span>
             </div>
 
-            <button class="export-btn" onclick="alert('Export feature coming soon')">
-                <i class="fa-solid fa-file-csv"></i> Export CSV
-            </button>
+<button class="export-btn" onclick="exportToCSV()">
+    <i class="fa-solid fa-file-csv"></i> Export CSV
+</button>
         </div>
 
         <div class="table-container">
@@ -389,6 +389,62 @@ session_start();
                 }
             }
         }
+        // --- 6. EXPORT TO CSV ---
+function exportToCSV() {
+    const table = document.getElementById('gradeTable');
+    if (!table || table.style.display === 'none') {
+        alert("Please select a class and wait for grades to load before exporting.");
+        return;
+    }
+
+    let csvContent = "";
+    const rows = table.querySelectorAll("tr");
+
+    rows.forEach((row) => {
+        const rowData = [];
+        const cols = row.querySelectorAll("th, td");
+
+        cols.forEach((col, index) => {
+            let data = "";
+            
+            // If it's the first column (Student Name), we need to extract text carefully
+            if (index === 0) {
+                // Gets the full name text from the student-cell div
+                data = col.querySelector('div[style*="font-weight:600"]') ? 
+                       col.querySelector('div[style*="font-weight:600"]').innerText : 
+                       col.innerText;
+            } else {
+                // Check if there is an input (grade), otherwise take innerText
+                const input = col.querySelector('input');
+                data = input ? input.value : col.innerText;
+            }
+
+            // Clean data: remove newlines and escape double quotes
+            data = data.replace(/\n/g, ' ').replace(/"/g, '""');
+            
+            // Wrap in quotes to handle commas within the data
+            rowData.push(`"${data}"`);
+        });
+
+        csvContent += rowData.join(",") + "\n";
+    });
+
+    // Create a download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // Create filename based on class name or timestamp
+    const className = document.getElementById('classSelector').selectedOptions[0].text;
+    const filename = `Grades_${className.replace(/[/\\?%*:|"<>]/g, '-')}.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
     </script>
 </body>
 </html>

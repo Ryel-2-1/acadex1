@@ -139,6 +139,30 @@
                 msgBox.style.display = 'block';
             }
         });
+		
+		document.getElementById('signupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirm-password').value;
+
+        if(password !== confirm) return alert("Passwords do not match");
+
+        const res = await fetch('api_auth.php?action=register', {
+            method: 'POST',
+            body: JSON.stringify({ email: email, password: password, role: 'student' })
+        });
+        const data = await res.json();
+        
+        if(data.status === 'success') {
+            alert("Account created! Redirecting to login...");
+            window.location.href = 'student_login.php';
+        } else {
+            alert(data.message);
+        }
+    });
+		
+		
     </script>
 
 </body>
