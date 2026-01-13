@@ -170,9 +170,9 @@ session_start();
             <div class="sidebar-item" id="tab-classwork" onclick="switchTab('classwork')"><i class="fa-solid fa-clipboard-list"></i> Classwork</div>
             <div class="sidebar-item" id="tab-people" onclick="switchTab('people')"><i class="fa-solid fa-user-group"></i> People</div>
         
-        <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
-    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
-</div>
+            <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
+                <i class="fa-solid fa-clock-rotate-left"></i> Attendance
+            </div>
         </div>
     </aside>
 
@@ -240,23 +240,23 @@ session_start();
             </div>
         </div>
         <div id="attendanceSection" class="active-tab-content" style="display:none;">
-    <div class="action-header">
-        <h2>Attendance Report</h2>
-        <button class="btn-go" onclick="fetchAttendance()"><i class="fa-solid fa-rotate"></i> Refresh</button>
-    </div>
-    <table id="attendanceTable" style="width:100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
-        <thead>
-            <tr style="background: #f8f9fa; border-bottom: 2px solid #eee; text-align: left;">
-                <th style="padding: 15px;">Student Name</th>
-                <th style="padding: 15px;">Time In</th>
-                <th style="padding: 15px;">Time Out</th>
-                <th style="padding: 15px;">Duration</th>
-            </tr>
-        </thead>
-        <tbody id="attendanceBody">
-            </tbody>
-    </table>
-</div>
+            <div class="action-header">
+                <h2>Attendance Report</h2>
+                <button class="btn-go" onclick="fetchAttendance()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            </div>
+            <table id="attendanceTable" style="width:100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #eee; text-align: left;">
+                        <th style="padding: 15px;">Student Name</th>
+                        <th style="padding: 15px;">Time In</th>
+                        <th style="padding: 15px;">Time Out</th>
+                        <th style="padding: 15px;">Duration</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceBody">
+                </tbody>
+            </table>
+        </div>
     </main>
 </div>
 
@@ -344,7 +344,7 @@ session_start();
             <span style="cursor:pointer" onclick="closeQuizEditor()">&times;</span>
         </div>
         <div class="modal-body" id="quizEditorList" style="max-height:60vh; overflow-y:auto;">
-            </div>
+        </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeQuizEditor()">Cancel</button>
             <button class="btn-go" onclick="saveEditedQuiz()">Save Quiz</button>
@@ -353,21 +353,56 @@ session_start();
 </div>
 
 <script>
-    const supabaseUrl = "<?= getenv('SUPABASE_URL') ?>";
-    const supabaseKey = "<?= getenv('SUPABASE_KEY') ?>";
+    // Supabase config from Azure env vars
+    const supabaseUrl = "<?php echo getenv('SUPABASE_URL'); ?>";
+    const supabaseKey = "<?php echo getenv('SUPABASE_KEY'); ?>";
 
-    console.log("🔍 Supabase URL:", supabaseUrl);
-    console.log("🔍 Supabase Key Exists?:", supabaseKey ? "YES" : "NO");
+    console.log("🔍 Supabase URL:", supabaseUrl || "(empty)");
+    console.log("🔍 Supabase key length:", supabaseKey ? supabaseKey.length : 0);
 
-    let supabaseClient;
+    let supabaseClient = null;
+    
+    let currentUser = null; 
+    let currentClassId = null;
+    let userFullName = "Teacher"; 
+    let jitsiApi = null;
+
+    // NEW: store latest generated quiz for editing
+    let latestGeneratedQuestions = [];
+    let latestQuizFileName = '';
+
     try {
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        console.log("✅ Supabase client created");
+        if (!supabaseUrl || !supabaseKey) {
+            console.error("Supabase config missing (URL or KEY empty).");
+        } else {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            console.log("✅ Supabase client created");
+        }
     } catch (e) {
         console.error("❌ Supabase init error:", e);
     }
-</script>
-  
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!supabaseClient) {
+            alert("Supabase is not configured correctly on the server. Please contact the admin.");
+            return;
+        }
+
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) {
+            console.error("getSession error:", error);
+        }
+        if (!session) { window.location.href = 'teacher_login.php'; return; }
+
+        currentUser = session.user;
+        await fetchUserProfile();
+        document.getElementById('global-loader').style.display = 'none';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const cid = urlParams.get('class_id');
+        if (cid) openClass(cid); 
+        else fetchClasses(); 
+    });
 
     async function fetchUserProfile() {
         try {
@@ -541,87 +576,86 @@ session_start();
         }
     }
 
- function createSubmissionCard(sub) {
-    const name = sub.student ? sub.student.full_name : "Unknown Student";
-    const email = sub.student ? sub.student.email : "";
-    const date = new Date(sub.created_at).toLocaleString();
-    const grade = sub.grade || "";
+    function createSubmissionCard(sub) {
+        const name = sub.student ? sub.student.full_name : "Unknown Student";
+        const email = sub.student ? sub.student.email : "";
+        const date = new Date(sub.created_at).toLocaleString();
+        const grade = sub.grade || "";
 
-    let detailsHtml = "";
+        let detailsHtml = "";
 
-    if (sub.content) {
-        let parsed = null;
-        try {
-            parsed = JSON.parse(sub.content);
-        } catch (e) {
-            parsed = null;
-        }
-
-        // If content is JSON from a quiz
-        if (parsed && Array.isArray(parsed.questions)) {
-            const summary = parsed.summary || {};
-            const comment = parsed.comment || "";
-
-            detailsHtml += `<div class="student-comment">`;
-
-            if (summary && summary.totalMcq != null) {
-                const total = summary.totalMcq;
-                const correct = summary.correctMcq;
-                const g = summary.grade;
-                detailsHtml += `<div><b>Score:</b> ${correct}/${total} (${g ?? 0}%)</div>`;
-            } else if (summary && summary.grade != null) {
-                detailsHtml += `<div><b>Grade:</b> ${summary.grade}</div>`;
+        if (sub.content) {
+            let parsed = null;
+            try {
+                parsed = JSON.parse(sub.content);
+            } catch (e) {
+                parsed = null;
             }
 
-            parsed.questions.forEach((q, idx) => {
-                const qText = escapeHtml(q.question || "");
-                const stud = escapeHtml(q.studentAnswer || "");
-                const corr = escapeHtml(q.correctAnswer || "");
+            // If content is JSON from a quiz
+            if (parsed && Array.isArray(parsed.questions)) {
+                const summary = parsed.summary || {};
+                const comment = parsed.comment || "";
 
-                detailsHtml += `
-                    <div style="margin-top:8px;">
-                        <div><b>Q${idx+1}.</b> ${qText}</div>
-                        <div><b>Your answer:</b> ${stud || '<i>no answer</i>'}</div>
-                        ${corr ? `<div><b>Correct:</b> ${corr}</div>` : ''}
-                    </div>`;
-            });
+                detailsHtml += `<div class="student-comment">`;
 
-            if (comment) {
-                detailsHtml += `<div style="margin-top:8px;"><b>Student comment:</b> ${escapeHtml(comment)}</div>`;
+                if (summary && summary.totalMcq != null) {
+                    const total = summary.totalMcq;
+                    const correct = summary.correctMcq;
+                    const g = summary.grade;
+                    detailsHtml += `<div><b>Score:</b> ${correct}/${total} (${g ?? 0}%)</div>`;
+                } else if (summary && summary.grade != null) {
+                    detailsHtml += `<div><b>Grade:</b> ${summary.grade}</div>`;
+                }
+
+                parsed.questions.forEach((q, idx) => {
+                    const qText = escapeHtml(q.question || "");
+                    const stud = escapeHtml(q.studentAnswer || "");
+                    const corr = escapeHtml(q.correctAnswer || "");
+
+                    detailsHtml += `
+                        <div style="margin-top:8px;">
+                            <div><b>Q${idx+1}.</b> ${qText}</div>
+                            <div><b>Your answer:</b> ${stud || '<i>no answer</i>'}</div>
+                            ${corr ? `<div><b>Correct:</b> ${corr}</div>` : ''}
+                        </div>`;
+                });
+
+                if (comment) {
+                    detailsHtml += `<div style="margin-top:8px;"><b>Student comment:</b> ${escapeHtml(comment)}</div>`;
+                }
+
+                detailsHtml += `</div>`;
+            } else {
+                // Old / non-quiz submissions – just show the text
+                detailsHtml = `<div class="student-comment">${escapeHtml(sub.content).replace(/\n/g, '<br>')}</div>`;
             }
-
-            detailsHtml += `</div>`;
-        } else {
-            // Old / non-quiz submissions – just show the text
-            detailsHtml = `<div class="student-comment">${escapeHtml(sub.content).replace(/\n/g, '<br>')}</div>`;
         }
+
+        return `
+        <div class="submission-row" style="border-left: 4px solid ${sub.status === 'graded' ? '#137333' : '#e37400'};">
+            <div style="display:flex; justify-content:space-between;">
+                <div>
+                    <div style="font-weight:600; color:#3c4043;">${name}</div>
+                    <div class="sub-meta">${email} • ${date}</div>
+                </div>
+                <div style="font-weight:bold; font-size:12px; color:${sub.status === 'graded' ? '#137333' : '#e37400'};">
+                    ${sub.status === 'graded' ? 'DONE' : 'NEEDS REVIEW'}
+                </div>
+            </div>
+
+            ${detailsHtml}
+            
+            ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
+
+            <div class="grade-box">
+                <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">
+                    ${sub.status === 'graded' ? 'Update Grade' : 'Return Grade'}
+                </button>
+            </div>
+        </div>`;
     }
-
-    return `
-    <div class="submission-row" style="border-left: 4px solid ${sub.status === 'graded' ? '#137333' : '#e37400'};">
-        <div style="display:flex; justify-content:space-between;">
-            <div>
-                <div style="font-weight:600; color:#3c4043;">${name}</div>
-                <div class="sub-meta">${email} • ${date}</div>
-            </div>
-            <div style="font-weight:bold; font-size:12px; color:${sub.status === 'graded' ? '#137333' : '#e37400'};">
-                ${sub.status === 'graded' ? 'DONE' : 'NEEDS REVIEW'}
-            </div>
-        </div>
-
-        ${detailsHtml}
-        
-        ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
-
-        <div class="grade-box">
-            <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
-            <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">
-                ${sub.status === 'graded' ? 'Update Grade' : 'Return Grade'}
-            </button>
-        </div>
-    </div>`;
-}
-
 
     async function saveGrade(subId) {
         const val = document.getElementById('grade-'+subId).value;
@@ -978,22 +1012,23 @@ session_start();
     }
 
     async function closeJitsi() {
-    // 1. End meeting status
-    await supabaseClient.from('classes').update({ meeting_active: false }).eq('id', currentClassId);
+        // 1. End meeting status
+        await supabaseClient.from('classes').update({ meeting_active: false }).eq('id', currentClassId);
 
-    // 2. Log Teacher Time Out
-    if (window.currentAttendanceId) {
-        const timeOut = new Date();
-        await supabaseClient
-            .from('attendance')
-            .update({ time_out: timeOut.toISOString() })
-            .eq('id', window.currentAttendanceId);
-        window.currentAttendanceId = null;
+        // 2. Log Teacher Time Out
+        if (window.currentAttendanceId) {
+            const timeOut = new Date();
+            await supabaseClient
+                .from('attendance')
+                .update({ time_out: timeOut.toISOString() })
+                .eq('id', window.currentAttendanceId);
+            window.currentAttendanceId = null;
+        }
+
+        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
+        document.getElementById('jitsiModal').style.display = 'none';
     }
 
-    if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
-    document.getElementById('jitsiModal').style.display = 'none';
-}
     function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
     function toggleDropdown() { document.getElementById('createDropdown').style.display = (document.getElementById('createDropdown').style.display === 'block') ? 'none' : 'block'; }
     function copyCode() { navigator.clipboard.writeText(document.getElementById('bannerCode').innerText); alert("Copied!"); }
@@ -1022,8 +1057,6 @@ session_start();
         modal.style.display = 'flex';
         if (prompt) prompt.focus();
     }
-
-   
 
     async function fetchPeople() {
         const teacherArea = document.getElementById('teacherListArea');
@@ -1061,114 +1094,113 @@ session_start();
         return `linear-gradient(135deg, hsl(${h1},70%,60%), hsl(${h2},70%,48%))`;
     }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
-    return text.replace(/[&<>"']/g, m => map[m]);
-}
-async function fetchAttendance() {
-    const tbody = document.getElementById('attendanceBody');
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading attendance...</td></tr>';
-
-    // 1) Get attendance rows for this class
-    const { data: rows, error } = await supabaseClient
-        .from('attendance')
-        .select('id, class_id, student_id, time_in, time_out, total_minutes')
-        .eq('class_id', currentClassId)
-        .order('time_in', { ascending: false });
-
-    if (error) {
-        console.error('Attendance error:', error);
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Error loading data.</td></tr>';
-        return;
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+        return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    if (!rows || rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No attendance records found.</td></tr>';
-        return;
-    }
+    async function fetchAttendance() {
+        const tbody = document.getElementById('attendanceBody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading attendance...</td></tr>';
 
-    // 2) Fetch student names from profiles in one query
-    const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
+        // 1) Get attendance rows for this class
+        const { data: rows, error } = await supabaseClient
+            .from('attendance')
+            .select('id, class_id, student_id, time_in, time_out, total_minutes')
+            .eq('class_id', currentClassId)
+            .order('time_in', { ascending: false });
 
-    let profilesById = {};
-    if (studentIds.length > 0) {
-        const { data: profiles, error: pErr } = await supabaseClient
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', studentIds);
-
-        if (pErr) {
-            console.error('Profiles error:', pErr);
-        } else {
-            profiles.forEach(p => {
-                profilesById[p.id] = p.full_name;
-            });
-        }
-    }
-
-    // 3) Render table
-    tbody.innerHTML = '';
-
-    rows.forEach(record => {
-        const studentName = profilesById[record.student_id] || 'Student';
-
-        const timeInStr = record.time_in
-            ? new Date(record.time_in).toLocaleString()
-            : '--';
-
-        const timeOutStr = record.time_out
-            ? new Date(record.time_out).toLocaleString()
-            : '<span style="color:green;">In meeting</span>';
-
-        let durationStr = '--';
-        if (record.total_minutes != null) {
-            durationStr = `${record.total_minutes} mins`;
-        } else if (record.time_in && record.time_out) {
-            // Fallback: compute on the fly if total_minutes is null
-            const diffMs = new Date(record.time_out) - new Date(record.time_in);
-            const mins = Math.round((diffMs / 60000) * 100) / 100;
-            durationStr = `${mins} mins`;
+        if (error) {
+            console.error('Attendance error:', error);
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Error loading data.</td></tr>';
+            return;
         }
 
-        const row = `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 15px;">${studentName}</td>
-                <td style="padding: 15px;">${timeInStr}</td>
-                <td style="padding: 15px;">${timeOutStr}</td>
-                <td style="padding: 15px; font-weight: bold;">${durationStr}</td>
-            </tr> 
-        `;
-        tbody.insertAdjacentHTML('beforeend', row);
-    });
-}
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No attendance records found.</td></tr>';
+            return;
+        }
 
+        // 2) Fetch student names from profiles in one query
+        const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
 
-function switchTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.active-tab-content').forEach(el => el.style.display = 'none');
-    // Remove active from all sidebar items
-    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+        let profilesById = {};
+        if (studentIds.length > 0) {
+            const { data: profiles, error: pErr } = await supabaseClient
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', studentIds);
 
-    // Show the selected section
-    const section = document.getElementById(tabName + 'Section');
-    if (section) section.style.display = 'block';
+            if (pErr) {
+                console.error('Profiles error:', pErr);
+            } else {
+                profiles.forEach(p => {
+                    profilesById[p.id] = p.full_name;
+                });
+            }
+        }
 
-    // Mark the selected tab as active
-    const tabItem = document.getElementById('tab-' + tabName);
-    if (tabItem) tabItem.classList.add('active');
+        // 3) Render table
+        tbody.innerHTML = '';
 
-    // Extra actions per tab
-    if (tabName === 'people') {
-        fetchPeople();
-    } else if (tabName === 'classwork' || tabName === 'stream') {
-        // both use classwork data (streamFeedArea + streamItemsArea)
-        fetchClasswork();
-    } else if (tabName === 'attendance') {
-        fetchAttendance();
+        rows.forEach(record => {
+            const studentName = profilesById[record.student_id] || 'Student';
+
+            const timeInStr = record.time_in
+                ? new Date(record.time_in).toLocaleString()
+                : '--';
+
+            const timeOutStr = record.time_out
+                ? new Date(record.time_out).toLocaleString()
+                : '<span style="color:green;">In meeting</span>';
+
+            let durationStr = '--';
+            if (record.total_minutes != null) {
+                durationStr = `${record.total_minutes} mins`;
+            } else if (record.time_in && record.time_out) {
+                // Fallback: compute on the fly if total_minutes is null
+                const diffMs = new Date(record.time_out) - new Date(record.time_in);
+                const mins = Math.round((diffMs / 60000) * 100) / 100;
+                durationStr = `${mins} mins`;
+            }
+
+            const row = `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 15px;">${studentName}</td>
+                    <td style="padding: 15px;">${timeInStr}</td>
+                    <td style="padding: 15px;">${timeOutStr}</td>
+                    <td style="padding: 15px; font-weight: bold;">${durationStr}</td>
+                </tr> 
+            `;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
     }
-}
 
+    function switchTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.active-tab-content').forEach(el => el.style.display = 'none');
+        // Remove active from all sidebar items
+        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+
+        // Show the selected section
+        const section = document.getElementById(tabName + 'Section');
+        if (section) section.style.display = 'block';
+
+        // Mark the selected tab as active
+        const tabItem = document.getElementById('tab-' + tabName);
+        if (tabItem) tabItem.classList.add('active');
+
+        // Extra actions per tab
+        if (tabName === 'people') {
+            fetchPeople();
+        } else if (tabName === 'classwork' || tabName === 'stream') {
+            // both use classwork data (streamFeedArea + streamItemsArea)
+            fetchClasswork();
+        } else if (tabName === 'attendance') {
+            fetchAttendance();
+        }
+    }
 </script>
 </body>
 </html>
