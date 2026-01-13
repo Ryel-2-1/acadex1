@@ -158,9 +158,7 @@
             <div class="sidebar-item" id="nav-unenroll" onclick="setView('unenrolled')">
                 <i class="fa-solid fa-user-xmark"></i> Unenrolled Classes
             </div>
-            <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
-    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
-</div>
+           
         </aside>
 
         <main class="main-content" id="main-content"></main>
