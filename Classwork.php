@@ -550,18 +550,49 @@ session_start();
 
     function closeGradingModal() { document.getElementById('gradingModal').style.display = 'none'; }
 
-    // --- CLASS CREATION & ASSIGNMENT LOGIC ---
-    async function createClass() {
+   async function createClass() {
         const title = document.getElementById('newClassName').value;
         const section = document.getElementById('newClassSection').value;
-        if(!title) return alert("Required");
         
-        const code = Math.random().toString(36).substring(2, 9).toUpperCase();
-        await supabaseClient.from('classes').insert([{ teacher_id: currentUser.id, title, section, class_code: code }]);
-        closeAllModals();
-        fetchClasses();
-    }
+        if (!title) return alert("Class Name is required");
+        
+        // 1. Disable button to prevent double-clicks
+        const btn = document.querySelector('#createClassModal .btn-go');
+        const oldText = btn.innerText;
+        btn.innerText = "Creating...";
+        btn.disabled = true;
 
+        try {
+            const code = Math.random().toString(36).substring(2, 9).toUpperCase();
+
+            // 2. Insert and CHECK for error
+            const { data, error } = await supabaseClient
+                .from('classes')
+                .insert([{ 
+                    teacher_id: currentUser.id, 
+                    title: title, 
+                    section: section, 
+                    class_code: code 
+                }])
+                .select();
+
+            if (error) {
+                console.error("Supabase Error:", error);
+                alert("Failed to create class: " + error.message + "\n\n(Hint: You probably need to run the SQL policies below)");
+            } else {
+                // Success!
+                closeAllModals();
+                fetchClasses();
+            }
+        } catch (err) {
+            console.error("Unexpected Error:", err);
+            alert("Unexpected error: " + err.message);
+        } finally {
+            // Reset button
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
+    }
     async function createAssign() {
         const title = document.getElementById('asTitle').value;
         const desc = document.getElementById('asInstr').value;
