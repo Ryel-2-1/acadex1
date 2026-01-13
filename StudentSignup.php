@@ -284,15 +284,17 @@
                 const user = authData.user;
 
                 // STEP B: Check if profile already exists for this auth user
-                const { data: existingProfile, error: checkError } = await _supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('id', user.id)
-                    .maybeSingle();
-
-                if (checkError && checkError.code !== 'PGRST116') { // ignore "No rows found" code
-                    throw checkError;
-                }
+                const { error: profileError } = await _supabase
+  .from('profiles')
+  .upsert(
+    {
+      id: user.id,          // must match auth.users.id
+      full_name: fullName,
+      email: email,
+      role: 'student'
+    },
+    { onConflict: 'id' }    // if id already exists, UPDATE instead of error
+  );
 
                 // Only INSERT if there is no row yet
                 if (!existingProfile) {
@@ -306,9 +308,9 @@
                         });
 
                     if (profileError) {
-                        console.error("Profile insert error:", profileError);
-                        throw profileError;
-                    }
+  console.error("Profile upsert error:", profileError);
+  throw profileError;
+}
                 }
 
                 showMessage("Registration successful! Please check your email and then log in.", "success");
