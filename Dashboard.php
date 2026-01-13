@@ -17,25 +17,6 @@ session_start();
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* --- Logout Button Style --- */
-.logout-btn {
-    margin-left: 15px;
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 20px;
-    cursor: pointer;
-    transition: color 0.2s ease, transform 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
-}
-
-.logout-btn:hover {
-    color: #e74c3c; /* Red color on hover */
-    transform: scale(1.1);
-}
         /* --- General Reset --- */
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; }
         * { box-sizing: border-box; }
@@ -67,6 +48,10 @@ session_start();
         .profile-info span { font-size: 12px; color: #777; }
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
 
+        /* Logout Button */
+        .logout-btn { margin-left: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; transition: color 0.2s ease, transform 0.2s ease; display: flex; align-items: center; justify-content: center; padding: 5px; }
+        .logout-btn:hover { color: #e74c3c; transform: scale(1.1); }
+
         /* --- MAIN LAYOUT --- */
         main { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
 
@@ -76,7 +61,10 @@ session_start();
         .widget-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .widget-header h3 { margin: 0; font-size: 18px; font-weight: 500; }
-        .widget-header a { font-size: 13px; color: #999; text-decoration: none; }
+        
+        /* View All Link Style */
+        .view-all-link { font-size: 13px; color: #1a73e8; text-decoration: none; cursor: pointer; font-weight: 500; }
+        .view-all-link:hover { text-decoration: underline; }
 
         /* Activity List */
         .activity-list { list-style: none; padding: 0; margin: 0; min-height: 100px; }
@@ -105,12 +93,16 @@ session_start();
         }
         .date.today { background-color: #1a73e8; color: white; font-weight: bold; }
         .date.empty { pointer-events: none; }
-        
-        /* Deadline Indicator Dot */
         .has-event::after {
             content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
             width: 4px; height: 4px; background-color: #e37400; border-radius: 50%;
         }
+
+        /* MODAL STYLES (Added for View All) */
+        .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 12px; width: 500px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
     </style>
 </head>
 <body>
@@ -126,22 +118,25 @@ session_start();
             <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
         </nav>
         <div class="profile-section">
-    <div style="text-align:right;">
-        <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
-        <span style="font-size:12px; color:#777;">Teacher</span>
-    </div>
-    <div class="avatar"></div>
-    <button class="logout-btn" onclick="handleLogout()" title="Logout">
-        <i class="fa-solid fa-right-from-bracket"></i>
-    </button>
-</div>
+            <div style="text-align:right;">
+                <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+                <span style="font-size:12px; color:#777;">Teacher</span>
+            </div>
+            <div class="avatar"></div>
+            <button class="logout-btn" onclick="handleLogout()" title="Logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
     </header>
 
     <main>
         <div class="widgets-container">
             
             <div class="widget-card">
-                <div class="widget-header"><h3>Recent Student Activity</h3><a href="#">View All</a></div>
+                <div class="widget-header">
+                    <h3>Recent Student Activity</h3>
+                    <span class="view-all-link" onclick="openActivityModal()">View All</span>
+                </div>
                 <ul class="activity-list" id="activityList">
                     <li style="color:#999; text-align:center; padding:20px;">Loading activity...</li>
                 </ul>
@@ -172,6 +167,18 @@ session_start();
         </div>
     </main>
 
+    <div id="activityModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0;">All Activity History</h3>
+                <button class="btn-close" onclick="closeAllModals()">&times;</button>
+            </div>
+            <ul class="activity-list" id="fullActivityList">
+                <li style="text-align:center; padding:20px; color:#777;">Loading full history...</li>
+            </ul>
+        </div>
+    </div>
+
 <script>
     // --- 1. SUPABASE CONFIG ---
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
@@ -187,12 +194,13 @@ session_start();
     document.addEventListener('DOMContentLoaded', () => {
         initCalendar();
         if(supabaseClient) {
-            fetchRecentActivity();
+            fetchRecentActivity();      // Fetches top 5 for widget
+            fetchTotalStudentCount();   // Fetches accurate total count
             fetchStatsAndCalendar();
         }
     });
 
-    // --- 3. FETCH RECENT ACTIVITY ---
+    // --- 3. FETCH RECENT ACTIVITY (Widget Limit 5) ---
     async function fetchRecentActivity() {
         const list = document.getElementById('activityList');
         try {
@@ -211,46 +219,102 @@ session_start();
                 .limit(5);
 
             if (error) throw error;
+            renderActivityList(activity, list);
 
-            list.innerHTML = '';
-            if (!activity || activity.length === 0) {
-                list.innerHTML = '<li style="color:#999; text-align:center; padding:15px;">No students have joined yet.</li>';
-                return;
-            }
-
-            document.getElementById('studentCount').innerText = activity.length;
-
-            activity.forEach(act => {
-                const li = document.createElement('li');
-                li.className = 'activity-item';
-                
-                const date = new Date(act.joined_at);
-                const now = new Date();
-                const diffMins = Math.floor((now - date) / 60000); 
-                let timeStr = date.toLocaleDateString();
-                if(diffMins < 1) timeStr = "Just now";
-                else if(diffMins < 60) timeStr = `${diffMins} mins ago`;
-                else if(diffMins < 1440) timeStr = `${Math.floor(diffMins/60)} hours ago`;
-
-                const name = act.student ? act.student.full_name : "Unknown";
-                const className = act.class ? act.class.title : "Class";
-                const colors = ['#e74c3c', '#3498db', '#f1c40f', '#9b59b6', '#2ecc71'];
-                const randColor = colors[Math.floor(Math.random() * colors.length)];
-                const initial = name.charAt(0).toUpperCase();
-
-                li.innerHTML = `
-                    <div class="activity-avatar" style="background-color:${randColor}; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; border-radius:50%; width:35px; height:35px;">${initial}</div>
-                    <div class="activity-details">
-                        <p style="margin:0 0 5px 0; font-size:14px; color:#333;"><strong>${name}</strong> joined <span style="color:#27ae60; font-weight:600;">${className}</span></p>
-                        <div class="activity-meta" style="font-size:12px; color:#999;">${timeStr}</div>
-                    </div>
-                `;
-                list.appendChild(li);
-            });
         } catch (err) { console.error("Activity Error:", err); }
     }
 
-    // --- 4. SYNC CALENDAR & DEADLINES ---
+    // --- 4. FETCH TOTAL STUDENT COUNT (Syncs unique students) ---
+    async function fetchTotalStudentCount() {
+        try {
+            // 1. Get Teacher's Class IDs
+            const { data: classes } = await supabaseClient.from('classes').select('id').eq('teacher_id', currentUser.id);
+            if (!classes || classes.length === 0) {
+                document.getElementById('studentCount').innerText = 0;
+                return;
+            }
+            const classIds = classes.map(c => c.id);
+
+            // 2. Get All Enrollments
+            const { data: enrollments, error } = await supabaseClient
+                .from('enrollments')
+                .select('student_id')
+                .in('class_id', classIds);
+
+            if (error) throw error;
+
+            // 3. Count Unique Students using Set
+            const uniqueStudents = new Set(enrollments.map(e => e.student_id));
+            document.getElementById('studentCount').innerText = uniqueStudents.size;
+
+        } catch (e) {
+            console.error("Count Error:", e);
+        }
+    }
+
+    // --- 5. OPEN VIEW ALL MODAL ---
+    window.openActivityModal = async function() {
+        document.getElementById('activityModal').style.display = 'flex';
+        const list = document.getElementById('fullActivityList');
+        list.innerHTML = '<li style="text-align:center; padding:20px; color:#777;">Loading...</li>';
+
+        try {
+            const { data: myClasses } = await supabaseClient.from('classes').select('id').eq('teacher_id', currentUser.id);
+            const classIds = myClasses.map(c => c.id);
+
+            // Fetch larger limit (50 items)
+            const { data: activity } = await supabaseClient
+                .from('enrollments')
+                .select(`joined_at, student:profiles(full_name), class:classes(title)`)
+                .in('class_id', classIds)
+                .order('joined_at', { ascending: false })
+                .limit(50);
+
+            renderActivityList(activity, list);
+
+        } catch (err) { 
+            list.innerHTML = '<li style="color:red; text-align:center;">Error loading details.</li>';
+        }
+    }
+
+    // --- HELPER: Render List Items ---
+    function renderActivityList(data, container) {
+        container.innerHTML = '';
+        if (!data || data.length === 0) {
+            container.innerHTML = '<li style="color:#999; text-align:center; padding:15px;">No students found.</li>';
+            return;
+        }
+
+        data.forEach(act => {
+            const li = document.createElement('li');
+            li.className = 'activity-item';
+            
+            const date = new Date(act.joined_at);
+            const now = new Date();
+            const diffMins = Math.floor((now - date) / 60000); 
+            let timeStr = date.toLocaleDateString();
+            if(diffMins < 1) timeStr = "Just now";
+            else if(diffMins < 60) timeStr = `${diffMins} mins ago`;
+            else if(diffMins < 1440) timeStr = `${Math.floor(diffMins/60)} hours ago`;
+
+            const name = act.student ? act.student.full_name : "Unknown";
+            const className = act.class ? act.class.title : "Class";
+            const colors = ['#e74c3c', '#3498db', '#f1c40f', '#9b59b6', '#2ecc71'];
+            const randColor = colors[Math.floor(Math.random() * colors.length)];
+            const initial = name.charAt(0).toUpperCase();
+
+            li.innerHTML = `
+                <div class="activity-avatar" style="background-color:${randColor}; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; border-radius:50%; width:35px; height:35px;">${initial}</div>
+                <div class="activity-details">
+                    <p style="margin:0 0 5px 0; font-size:14px; color:#333;"><strong>${name}</strong> joined <span style="color:#27ae60; font-weight:600;">${className}</span></p>
+                    <div class="activity-meta" style="font-size:12px; color:#999;">${timeStr}</div>
+                </div>
+            `;
+            container.appendChild(li);
+        });
+    }
+
+    // --- 6. OTHER FUNCTIONS ---
     async function fetchStatsAndCalendar() {
         try {
             const { data: deadlines, error } = await supabaseClient
@@ -261,12 +325,9 @@ session_start();
                 .gte('due_date', new Date().toISOString());
 
             if (error) throw error;
-
             document.getElementById('deadlineCount').innerText = deadlines ? deadlines.length : 0;
-            
             const eventDates = deadlines.map(d => new Date(d.due_date).getDate());
             renderCalendar(eventDates);
-
         } catch (err) { console.error("Stats Error:", err); }
     }
 
@@ -299,22 +360,21 @@ session_start();
             grid.appendChild(div);
         }
     }
+
+    function closeAllModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.style.display = 'none'); }
+    window.onclick = function(e) { if(e.target.classList.contains('modal-overlay')) closeAllModals(); }
+
     async function handleLogout() {
-    if (confirm("Are you sure you want to log out?")) {
-        try {
-            // If using Supabase Auth
-            if (supabaseClient.auth) {
-                await supabaseClient.auth.signOut();
+        if (confirm("Are you sure you want to log out?")) {
+            try {
+                if (supabaseClient.auth) await supabaseClient.auth.signOut();
+                window.location.href = 'index.php';
+            } catch (err) {
+                console.error("Logout Error:", err);
+                window.location.href = 'index.php';
             }
-            // Redirect to login page
-            window.location.href = 'index.php';
-        } catch (err) {
-            console.error("Logout Error:", err);
-            // Fallback redirect
-            window.location.href = 'index.php';
         }
     }
-}
 </script>
 </body>
-</html> 
+</html>
