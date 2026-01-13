@@ -196,6 +196,7 @@
                     <input type="file" id="submitFile" hidden onchange="handleFileSelect(this)">
                     <span id="fileNameDisplay"><i class="fa-solid fa-plus"></i> Add or Create</span>
                 </div>
+                <textarea id="submissionComment" class="input-field" placeholder="Add a private comment..." rows="3" style="resize: none; margin-top: 10px;"></textarea>
                 
                 <button class="btn-submit" style="width:100%; margin-top:15px;" id="btnMarkDone" onclick="submitAssignment()">Mark as Done</button>
             </div>
@@ -513,28 +514,62 @@
         }
 
         async function submitAssignment() {
-            const btn = document.getElementById('btnMarkDone');
-            btn.innerText = "Submitting..."; btn.disabled = true;
+    const btn = document.getElementById('btnMarkDone');
+    const fileInput = document.getElementById('submitFile');
+    const commentInput = document.getElementById('submissionComment');
+    
+    // 1. Validation: Make sure a file is selected
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please attach a file before marking as done.");
+        return;
+    }
 
-            // Simulate file upload (Since we don't have storage configured, we just save a record)
-            try {
-                const { error } = await _supabase.from('submissions').upsert({
-                    student_id: currentUser.id,
-                    classwork_id: currentOpenItem.id,
-                    status: 'submitted',
-                    grade: null // Reset grade if re-submitting
-                }, { onConflict: 'student_id, classwork_id' });
+    btn.innerText = "Uploading..."; 
+    btn.disabled = true;
 
-                if (error) throw error;
-                alert("Work submitted successfully!");
-                closeAssignmentModal();
+    try {
+        const file = fileInput.files[0];
+        const comment = commentInput.value;
 
-            } catch(e) {
-                alert("Error submitting: " + e.message);
-            } finally {
-                btn.innerText = "Mark as Done"; btn.disabled = false;
-            }
-        }
+        // --- STEP A: Upload File to Supabase Storage ---
+        // We create a unique path: student_id / classwork_id / filename
+        const filePath = `${currentUser.id}/${currentOpenItem.id}/${Date.now()}_${file.name}`;
+        
+        const { data: uploadData, error: uploadError } = await _supabase.storage
+            .from('homework_files') // Make sure this matches your Bucket name!
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // --- STEP B: Get the Public Link ---
+        const { data: { publicUrl } } = _supabase.storage
+            .from('homework_files')
+            .getPublicUrl(filePath);
+
+        // --- STEP C: Save Data to "submissions" Table ---
+        const { error: dbError } = await _supabase.from('submissions').upsert({
+            student_id: currentUser.id,
+            classwork_id: currentOpenItem.id,
+            file_url: publicUrl,       // The link to the file we just uploaded
+            content: comment,          // The "dsadas" text
+            status: 'submitted',
+            grade: null,               // Reset grade since it's a new submission
+            created_at: new Date().toISOString()
+        }, { onConflict: 'student_id, classwork_id' }); // Ensures we update if they submit again
+
+        if (dbError) throw dbError;
+
+        alert("Work submitted successfully!");
+        closeAssignmentModal();
+
+    } catch(e) {
+        console.error(e);
+        alert("Error submitting: " + e.message);
+    } finally {
+        btn.innerText = "Mark as Done"; 
+        btn.disabled = false;
+    }
+}
 
         // --- UTILS ---
         function getStatus(classId) { return localStorage.getItem(`status_${currentUser.id}_${classId}`) || 'active'; }

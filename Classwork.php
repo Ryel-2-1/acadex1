@@ -27,10 +27,7 @@ session_start();
     .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
     .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
     
-    /* Avatar style updated to handle dynamic images */
     .avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #ddd; background-size: cover; background-position: center; }
-    
-    /* Logout Button */
     .logout-btn { margin-left: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; transition: 0.2s; padding: 5px; }
     .logout-btn:hover { color: #e74c3c; transform: scale(1.1); }
 
@@ -61,10 +58,8 @@ session_start();
     .class-title { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #000; margin-bottom: 2px; }
     .class-subtitle { font-size: 12px; color: #666; font-weight: 500; }
     
-    /* Class Code Badge on Card */
     .code-badge { font-size: 11px; background: #e8f0fe; color: #1a73e8; padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block; margin-top: 4px; }
 
-    /* Card Actions */
     .card-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; opacity: 0; transition: 0.2s; z-index: 10; }
     .class-card:hover .card-actions { opacity: 1; }
     .action-icon { width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 14px; transition: 0.2s; }
@@ -78,7 +73,6 @@ session_start();
     .class-banner-content h1 { margin: 0; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .virtual-btn { background-color: rgba(255, 255, 255, 0.9); color: #1a73e8; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     
-    /* CLASS CODE BOX */
     .class-code-box {
         position: absolute; top: 20px; right: 20px;
         background: rgba(255, 255, 255, 0.9); padding: 10px 15px;
@@ -94,8 +88,11 @@ session_start();
     /* MODALS & INPUTS */
     .modal-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; border-radius: 8px; width: 550px; padding: 0; box-shadow: 0 24px 38px rgba(0,0,0,0.14); }
+    /* Grading modal specific width */
+    .modal-content.grading-modal { width: 700px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+    
     .modal-header { padding: 15px 24px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
-    .modal-body { padding: 24px; }
+    .modal-body { padding: 24px; overflow-y: auto; }
     .input-group { margin-bottom: 15px; }
     .input-group label { display: block; font-weight: 500; margin-bottom: 5px; }
     .input-group input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
@@ -120,6 +117,14 @@ session_start();
     
     /* Loading Overlay */
     #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
+
+    /* Grading List Styles */
+    .submission-row { border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
+    .sub-meta { font-size: 12px; color: #5f6368; margin-top: 4px; }
+    .file-link { display: inline-block; margin-top: 10px; color: #1a73e8; text-decoration: none; border: 1px solid #dadce0; padding: 5px 12px; border-radius: 15px; font-size: 13px; }
+    .file-link:hover { background: #f1f3f4; }
+    .student-comment { background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px; font-style: italic; color: #555; }
+    .grade-box { text-align: right; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
 </style>
 </head>
 <body>
@@ -287,39 +292,46 @@ session_start();
         </div>
     </div>
 
+    <div id="gradingModal" class="modal-overlay">
+        <div class="modal-content grading-modal">
+            <div class="modal-header">
+                <h2 id="gradingTitle">Submissions</h2>
+                <span style="cursor:pointer" onclick="closeGradingModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="gradingList">
+                <p style="text-align:center; color:#777;">Loading...</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeGradingModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
 <script>
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
     let supabaseClient;
     
-    // CHANGED: Use a variable that will be populated dynamically
     let currentUser = null; 
     let currentClassId = null;
-    let userFullName = "Teacher"; // Store name for Jitsi
+    let userFullName = "Teacher"; 
 
     try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
     catch (e) { console.error(e); }
 
     // --- MAIN INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
-        // 1. Get Session
         const { data: { session } } = await supabaseClient.auth.getSession();
         
         if (!session) {
-            // No session? Redirect to login
             window.location.href = 'teacher_login.php';
             return;
         }
 
         currentUser = session.user;
-
-        // 2. Fetch User Profile
         await fetchUserProfile();
-
-        // 3. Remove Loader
         document.getElementById('global-loader').style.display = 'none';
 
-        // 4. Handle Routing
         const urlParams = new URLSearchParams(window.location.search);
         const cid = urlParams.get('class_id');
         if (cid) openClass(cid); 
@@ -336,16 +348,11 @@ session_start();
             
             if (profile) {
                 userFullName = profile.full_name;
-                // Update Name
                 document.getElementById('profile-name').innerText = profile.full_name;
-                
-                // Update Avatar
                 const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=0D8ABC&color=fff`;
                 document.getElementById('profile-avatar').style.backgroundImage = `url('${avatarUrl}')`;
             }
-        } catch (err) {
-            console.error("Profile Error:", err);
-        }
+        } catch (err) { console.error("Profile Error:", err); }
     }
 
     function showFile(input, txtId) { 
@@ -482,13 +489,18 @@ session_start();
         data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'stream-item';
+            
+            // Store item data for click handler
             div.onclick = () => showDetail(item);
+
             let icon = 'fa-file-lines'; let color = 'icon-assign';
             if(item.type === 'quiz') { icon = 'fa-robot'; color = 'icon-quiz'; }
             
             div.innerHTML = `<div class="item-icon ${color}"><i class="fa-solid ${icon}"></i></div><div class="item-content"><div class="item-title">${item.title}</div><div class="item-meta">Posted ${new Date(item.created_at).toLocaleDateString()}</div></div>`;
+            
             const divClone = div.cloneNode(true);
             divClone.onclick = () => { switchTab('classwork'); showDetail(item); };
+            
             items.appendChild(div); list.appendChild(divClone);
         });
     }
@@ -515,12 +527,22 @@ session_start();
         studentArea.innerHTML = sHtml;
     }
 
+    // --- MODIFIED: Show Detail with Grading Button ---
     function showDetail(item) {
         document.getElementById('streamListView').style.display = 'none';
         document.getElementById('detailView').style.display = 'block';
         document.getElementById('detTitle').innerText = item.title;
-        let content = `<p style="font-size:1.1rem; color:#555;">${item.description || ''}</p>`;
-        if (item.due_date) content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p>`;
+        
+        let content = `<div style="display:flex; justify-content:space-between; align-items:start;">`;
+        content += `<div><p style="font-size:1.1rem; color:#555;">${item.description || ''}</p>`;
+        if (item.due_date) content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p></div>`;
+        
+        // Add Button to Open Grading Modal
+        // Escape the title just in case it has quotes
+        const safeTitle = item.title.replace(/'/g, "\\'");
+        content += `<button onclick="openGradingModal('${item.id}', '${safeTitle}')" style="background:#00C060; color:white; border:none; padding:10px 20px; border-radius:25px; cursor:pointer; font-weight:600;"><i class="fa-solid fa-list-check"></i> View Submissions</button>`;
+        content += `</div>`;
+
         if(item.type === 'quiz' && item.quiz_data) {
             let questions = item.quiz_data;
             if (typeof questions === 'string') { try { questions = JSON.parse(questions); } catch(e) {} }
@@ -543,6 +565,171 @@ session_start();
         document.getElementById('detailView').style.display = 'none';
         document.getElementById('streamListView').style.display = 'block';
     }
+
+    // --- NEW: Grading Functions ---
+
+    async function fetchSubmissionsForClasswork(classworkId) {
+    console.log("Fetching submissions for Classwork ID:", classworkId);
+
+    // 1. SELECT * FROM submissions WHERE classwork_id = [THE_ID]
+    // We also join 'profiles' to get the student's name
+    const { data: submissions, error } = await supabaseClient
+        .from('submissions')
+        .select(`
+            *,
+            student:profiles ( full_name, email )
+        `)
+        .eq('classwork_id', classworkId) // <--- THIS IS THE FILTER
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching submissions:", error);
+        return [];
+    }
+
+    // 2. Separate them into two lists: Graded vs. Not Graded
+    const graded = submissions.filter(sub => sub.status === 'graded');
+    const toGrade = submissions.filter(sub => sub.status !== 'graded');
+
+    console.log("To Grade:", toGrade);
+    console.log("Already Graded:", graded);
+
+    return { toGrade, graded };
+}
+    async function openGradingModal(classworkId, title) {
+    // Open the modal
+    document.getElementById('gradingModal').style.display = 'flex';
+    document.getElementById('gradingTitle').innerText = title;
+    const listContainer = document.getElementById('gradingList');
+    listContainer.innerHTML = 'Loading...';
+
+    // Fetch the separated data
+    const { toGrade, graded } = await fetchSubmissionsForClasswork(classworkId);
+
+    let html = '';
+
+    // SECTION 1: Needs Grading
+    if (toGrade.length > 0) {
+        html += `<h3 style="color:#e37400; border-bottom:2px solid #e37400; padding-bottom:5px;">Needs Grading (${toGrade.length})</h3>`;
+        toGrade.forEach(sub => {
+            html += createSubmissionCard(sub); // (Use your existing card HTML generator here)
+        });
+    } else {
+        html += `<h3 style="color:#666;">Needs Grading (0)</h3><p style="color:#999; font-style:italic;">All caught up!</p>`;
+    }
+
+    // SECTION 2: Done / Graded
+    if (graded.length > 0) {
+        html += `<h3 style="color:#137333; border-bottom:2px solid #137333; padding-bottom:5px; margin-top:30px;">Graded (${graded.length})</h3>`;
+        graded.forEach(sub => {
+            html += createSubmissionCard(sub);
+        });
+    }
+
+    listContainer.innerHTML = html;
+}
+
+// Helper to keep your HTML clean
+function createSubmissionCard(sub) {
+    const name = sub.student ? sub.student.full_name : "Unknown";
+    const gradeVal = sub.grade || "";
+    
+    return `
+    <div style="border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
+        <div style="font-weight:bold;">${name}</div>
+        <div style="font-size:12px; color:#555; margin-bottom:10px;">${new Date(sub.created_at).toLocaleString()}</div>
+        
+        ${sub.content ? `<div style="background:#f5f5f5; padding:10px; border-radius:5px; font-style:italic;">"${sub.content}"</div>` : ''}
+        ${sub.file_url ? `<div style="margin-top:5px;"><a href="${sub.file_url}" target="_blank" style="color:#1a73e8;">View File</a></div>` : ''}
+        
+        <div style="margin-top:15px; text-align:right;">
+            <input type="number" id="grade-${sub.id}" value="${gradeVal}" placeholder="/100" style="width:60px; padding:5px;">
+            <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">
+                ${sub.status === 'graded' ? 'Update Grade' : 'Submit Grade'}
+            </button>
+        </div>
+    </div>`;
+}
+
+    function renderSubmissions(subs) {
+        const container = document.getElementById('gradingList');
+        container.innerHTML = '';
+        if (!subs || subs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#777; margin-top:20px;">No students have submitted work yet.</p>';
+            return;
+        }
+
+        subs.forEach(sub => {
+            const name = sub.student ? sub.student.full_name : "Unknown Student";
+            const email = sub.student ? sub.student.email : "";
+            const date = new Date(sub.created_at).toLocaleString();
+            const grade = sub.grade || "";
+
+            const html = `
+            <div class="submission-row">
+                <div style="display:flex; justify-content:space-between;">
+                    <div>
+                        <div style="font-weight:600; color:#3c4043;">${name}</div>
+                        <div class="sub-meta">${email} • ${date}</div>
+                    </div>
+                    <div style="color:${sub.status==='graded'?'#1a73e8':'#e37400'}; font-weight:500; font-size:13px; text-transform:uppercase;">${sub.status}</div>
+                </div>
+
+                ${ sub.content ? `<div class="student-comment">"${sub.content}"</div>` : '' }
+                
+                ${ sub.file_url ? `<a href="${sub.file_url}" target="_blank" class="file-link"><i class="fa-solid fa-paperclip"></i> View Attached Work</a>` : '' }
+
+                <div class="grade-box">
+                    <input type="number" placeholder="/100" value="${grade}" id="grade-${sub.id}" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="saveGrade(${sub.id})" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:500;">Return Grade</button>
+                </div>
+            </div>`;
+            container.innerHTML += html;
+        });
+    }
+
+    // REPLACE your existing saveGrade function with this:
+async function saveGrade(subId) {
+    const val = document.getElementById('grade-'+subId).value;
+    const btn = document.getElementById('grade-'+subId).nextElementSibling;
+    
+    // 1. Validate input
+    if (val === "" || val < 0 || val > 100) {
+        alert("Please enter a valid grade (0-100)");
+        return;
+    }
+
+    btn.innerText = "Saving...";
+    btn.disabled = true;
+
+    // 2. Update ONLY the submissions table
+    // We update the 'grade' column and set status to 'graded'
+    const { error } = await supabaseClient
+        .from('submissions')
+        .update({ 
+            grade: val, 
+            status: 'graded' 
+        })
+        .eq('id', subId);
+
+    if(error) {
+        console.error(error);
+        alert("Error saving grade: " + error.message);
+        btn.innerText = "Return Grade";
+        btn.disabled = false;
+    } else {
+        btn.innerText = "Saved!";
+        btn.style.backgroundColor = "#137333"; // Change color to green
+        
+        // Optional: Reset button after 2 seconds
+        setTimeout(() => {
+            btn.innerText = "Return Grade";
+            btn.style.backgroundColor = "#1a73e8"; // Back to blue
+            btn.disabled = false;
+        }, 2000);
+    }
+}
+    function closeGradingModal() { document.getElementById('gradingModal').style.display = 'none'; }
 
     async function createClass() {
         const title = document.getElementById('newClassName').value;
@@ -628,7 +815,7 @@ session_start();
             height: "100%",
             parentNode: document.querySelector('#jitsi-container'),
             userInfo: {
-                displayName: userFullName // CHANGED: Uses dynamic name
+                displayName: userFullName 
             },
             configOverwrite: {
                 startWithAudioMuted: true,
