@@ -53,7 +53,14 @@
         <div id="api-message"></div>
 
         <form id="signupForm">
-            
+            <div class="form-group">
+                <label class="input-label">Full Name</label>
+                <div class="input-wrapper">
+                    <i class="fa-regular fa-user input-icon"></i>
+                    <input type="text" id="full_name" class="form-input" placeholder="John Doe" required>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="input-label">Email Address</label>
                 <div class="input-wrapper">
@@ -78,8 +85,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-signup">Sign up</button>
-
+            <button type="submit" class="btn-signup" id="submitBtn">Sign up</button>
         </form>
 
         <div class="divider-container">
@@ -91,79 +97,87 @@
         <a href="student_login.php" class="btn-login">Go to Student Login</a>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
-        document.getElementById('signupForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); // Stop the form from reloading the page
+       // 1. Initialize Supabase Client
+const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            const msgBox = document.getElementById('api-message');
+const signupForm = document.getElementById('signupForm');
+const msgBox = document.getElementById('api-message');
 
-            // Client-side validation
-            if (password !== confirmPassword) {
-                showMessage("Passwords do not match.", "error");
-                return;
-            }
+// 2. Main Signup Logic
+signupForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-            try {
-                // Send data to PHP API
-                const response = await fetch('api_signup.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email: email, password: password })
-                });
+    const fullName = document.getElementById('full_name').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    const submitBtn = document.getElementById('submitBtn');
 
-                const result = await response.json();
+    // Basic Validation
+    if (password !== confirmPassword) {
+        showMessage("Passwords do not match.", "error");
+        return;
+    }
 
-                if (result.status === 'success') {
-                    showMessage(result.message, "success");
-                    // Redirect after success
-                    setTimeout(() => {
-                        window.location.href = 'student.php'; 
-                    }, 1500);
-                } else {
-                    showMessage(result.message, "error");
+    // UI State: Loading
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Creating Account...";
+
+    try {
+        // STEP A: Sign up user in Supabase Auth
+        const { data: authData, error: authError } = await _supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName // Store name in Auth metadata too
                 }
-
-            } catch (error) {
-                console.error('Error:', error);
-                showMessage("An error occurred connecting to the server.", "error");
-            }
-
-            function showMessage(text, type) {
-                msgBox.textContent = text;
-                msgBox.className = type; // applies .success or .error CSS class
-                msgBox.style.display = 'block';
             }
         });
-		
-		document.getElementById('signupForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const confirm = document.getElementById('confirm-password').value;
 
-        if(password !== confirm) return alert("Passwords do not match");
+        if (authError) throw authError;
 
-        const res = await fetch('api_auth.php?action=register', {
-            method: 'POST',
-            body: JSON.stringify({ email: email, password: password, role: 'student' })
-        });
-        const data = await res.json();
-        
-        if(data.status === 'success') {
-            alert("Account created! Redirecting to login...");
-            window.location.href = 'student_login.php';
-        } else {
-            alert(data.message);
+        // STEP B: Upsert into 'profiles' table
+        // Using .upsert() prevents "duplicate key" errors by updating if the ID exists
+        if (authData.user) {
+            const { error: profileError } = await _supabase
+                .from('profiles')
+                .upsert([
+                    { 
+                        id: authData.user.id, // Linking Auth ID to Profile ID
+                        full_name: fullName, 
+                        email: email,
+                        role: 'student' // Hardcoded default role
+                    }
+                ], { onConflict: 'id' }); // Specifically target the ID for conflict check
+
+            if (profileError) throw profileError;
+
+            showMessage("Registration successful! Check your email for a verification link.", "success");
+            
+            setTimeout(() => {
+                window.location.href = 'student_login.php'; 
+            }, 3000);
         }
-    });
-		
-		
-    </script>
 
+    } catch (err) {
+        console.error('Signup error:', err);
+        showMessage(err.message || "An error occurred.", "error");
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Sign up";
+    }
+});
+
+function showMessage(text, type) {
+    msgBox.textContent = text;
+    msgBox.className = type; 
+    msgBox.style.display = 'block';
+}
+    </script>
 </body>
 </html>

@@ -182,7 +182,9 @@ session_start();
                                 <h1 id="bannerTitle">Loading...</h1>
                                 <p id="bannerSubtitle">...</p>
                             </div>
-                            <button class="virtual-btn"><i class="fa-solid fa-video"></i> Virtual Class</button>
+                            <button class="virtual-btn" onclick="startMeeting()">
+    <i class="fa-solid fa-video"></i> Virtual Class
+</button>
                         </div>
                     </div>
                     <div id="streamFeedArea" style="margin-top:30px;">Loading stream...</div>
@@ -272,7 +274,15 @@ session_start();
             <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button></div>
         </div>
     </div>
-
+<div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
+    <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
+        <div class="modal-header">
+            <h2 id="jitsiTitle">Virtual Class</h2>
+            <button class="btn-cancel" onclick="closeJitsi()">Close Meeting</button>
+        </div>
+        <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
+    </div>
+</div>
 <script>
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
@@ -552,6 +562,60 @@ session_start();
             } catch (err) { console.error("Logout Error:", err); window.location.href = 'index.php'; }
         }
     }
+    let jitsiApi = null;
+
+function startMeeting() {
+    // Generate a unique room name to prevent other users from accidentally joining
+    const roomName = "TechHub_Room_" + currentClassId + "_" + Math.floor(Math.random() * 1000);
+    const title = document.getElementById('bannerTitle').innerText;
+    
+    document.getElementById('jitsiTitle').innerText = "Virtual Class: " + title;
+    document.getElementById('jitsiModal').style.display = 'flex';
+
+    // Target the community server
+    const domain = "meet.ffmuc.net"; 
+    
+    const options = {
+        roomName: roomName,
+        width: "100%",
+        height: "100%",
+        parentNode: document.querySelector('#jitsi-container'),
+        userInfo: {
+            displayName: "Prof. Jhomari" 
+        },
+        configOverwrite: {
+            startWithAudioMuted: true,
+            startWithVideoMuted: false,
+            prejoinPageEnabled: false, // Skips the 'Allow Camera' lobby for faster entry
+            disableWelcomePage: true   // Prevents redirecting to the Jitsi home page on hangup
+        },
+        interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: [
+                'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                'security'
+            ],
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            DEFAULT_REMOTE_DISPLAY_NAME: 'Student'
+        }
+    };
+
+    if (jitsiApi) jitsiApi.dispose();
+    jitsiApi = new JitsiMeetExternalAPI(domain, options);
+}
+function closeJitsi() {
+    if (jitsiApi) {
+        jitsiApi.dispose();
+        jitsiApi = null;
+    }
+    document.getElementById('jitsiModal').style.display = 'none';
+    document.getElementById('jitsi-container').innerHTML = ''; // Clear the div
+}
 </script>
+<script src="https://meet.ffmuc.net/external_api.js"></script>
 </body>
 </html>
