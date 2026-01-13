@@ -29,8 +29,13 @@ session_start();
     .logo-text { font-size: 24px; font-weight: 700; color: #000; }
     .nav-links { display: flex; gap: 30px; height: 100%; }
     .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; height: 100%; cursor: pointer; }
-    .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
-    /* --- Logout Button Style --- */
+   .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
+    .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
+     .profile-info { text-align: right; }
+        .profile-info h4 { margin: 0; font-size: 14px; color: #333; }
+        .profile-info span { font-size: 12px; color: #777; }
+                /* --- Logout Button Style --- */
 .logout-btn {
     margin-left: 15px;
     background: none;
@@ -44,14 +49,11 @@ session_start();
     justify-content: center;
     padding: 5px;
 }
+
 .logout-btn:hover {
-    color: #e74c3c;
+    color: #e74c3c; /* Red color on hover */
     transform: scale(1.1);
 }
-/* Ensure profile section matches Dashboard */
-.profile-section { display: flex; align-items: center; gap: 12px; width: auto; justify-content: flex-end; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
-
     /* --- LAYOUT --- */
     .app-layout { display: flex; flex: 1; overflow: hidden; }
     .sidebar { width: 300px; background: white; display: flex; flex-direction: column; padding: 24px 0; border-right: 1px solid #e0e0e0; }
@@ -71,13 +73,34 @@ session_start();
     .create-btn { background: #1a73e8; color: white; border: none; padding: 10px 24px; border-radius: 25px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     
     .class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    
     .class-card { background: transparent; cursor: pointer; transition: transform 0.2s; position: relative; }
     .class-card:hover { transform: translateY(-3px); }
+    
     .class-image { width: 100%; height: 160px; background-color: #ddd; border-radius: 12px; overflow: hidden; margin-bottom: 10px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .class-image img { width: 100%; height: 100%; object-fit: cover; }
     .class-text-content { padding: 0 5px; }
     .class-title { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #000; margin-bottom: 2px; }
     .class-subtitle { font-size: 12px; color: #666; font-weight: 500; }
+
+    /* --- NEW: EDIT/DELETE BUTTONS CSS --- */
+    .card-actions { 
+        position: absolute; top: 10px; right: 10px; 
+        display: flex; gap: 8px; opacity: 0; transition: 0.2s; z-index: 10; 
+    }
+    .class-card:hover .card-actions { opacity: 1; }
+    
+    .action-icon { 
+        width: 32px; height: 32px; background: white; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; 
+        cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+        font-size: 14px; transition: 0.2s;
+    }
+    .action-icon:hover { transform: scale(1.1); }
+    .icon-edit { color: #1a73e8; }
+    .icon-edit:hover { background: #e8f0fe; }
+    .icon-del { color: #d93025; }
+    .icon-del:hover { background: #fce8e6; }
 
     /* --- INSIDE CLASS VIEW --- */
     .class-banner { height: 240px; border-radius: 8px; background-image: url('https://gstatic.com/classroom/themes/img_read.jpg'); background-size: cover; background-position: center; position: relative; margin-bottom: 25px; }
@@ -119,26 +142,26 @@ session_start();
 <body>
 
   <header>
-    <div class="logo-section" onclick="window.location.href='Dashboard.php'">
-        <i class="fa-solid fa-book-open logo-icon"></i>
-        <span class="logo-text">TechHub</span>
-    </div>
-    <nav class="nav-links">
-        <a href="Dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
-        <a href="Classwork.php" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
-        <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
-    </nav>
-    <div class="profile-section">
-        <div style="text-align:right;">
-            <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
-            <span style="font-size:12px; color:#777;">Teacher</span>
+        <div class="logo-section" onclick="window.location.href='Dashboard.php'">
+            <i class="fa-solid fa-book-open logo-icon"></i>
+            <span class="logo-text">TechHub</span>
         </div>
-        <div class="avatar"></div>
-        <button class="logout-btn" onclick="handleLogout()" title="Logout">
-            <i class="fa-solid fa-right-from-bracket"></i>
-        </button>
+      <nav class="nav-links">
+    <a href="Dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+    <a href="Classwork.php" id="nav-classes" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
+    <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
+</nav>
+        <div class="profile-section">
+    <div style="text-align:right;">
+        <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+        <span style="font-size:12px; color:#777;">Teacher</span>
     </div>
-</header>
+    <div class="avatar"></div>
+    <button class="logout-btn" onclick="handleLogout()" title="Logout">
+        <i class="fa-solid fa-right-from-bracket"></i>
+    </button>
+</div>
+    </header>
 
     <div class="app-layout">
         <aside class="sidebar">
@@ -212,6 +235,11 @@ session_start();
 
                 </div>
 
+                <div id="peopleSection" class="active-tab-content" style="display:none; max-width: 800px; margin: 0 auto;">
+                    <div id="teacherListArea"></div>
+                    <div id="studentListArea" style="margin-top: 30px;"></div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -224,6 +252,18 @@ session_start();
                 <div class="input-group"><label>Section</label><input type="text" id="newClassSection"></div>
             </div>
             <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="createClass()">Create</button></div>
+        </div>
+    </div>
+
+    <div id="editClassModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Rename Class</h2><span style="cursor:pointer;" onclick="closeAllModals()">&times;</span></div>
+            <div class="modal-body">
+                <input type="hidden" id="editClassId">
+                <div class="input-group"><label>Class Name</label><input type="text" id="editClassName"></div>
+                <div class="input-group"><label>Section</label><input type="text" id="editClassSection"></div>
+            </div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" onclick="saveClassRename()">Save Changes</button></div>
         </div>
     </div>
 
@@ -297,16 +337,19 @@ session_start();
     }
 
     async function openClass(classId) {
-        currentClassId = classId;
-        const url = new URL(window.location);
-        url.searchParams.set('class_id', classId);
-        window.history.pushState({}, '', url);
+    currentClassId = classId;
+    
+    // Add this line to ensure the Top Nav stays blue
+    document.getElementById('nav-classes').classList.add('active');
 
-        document.getElementById('view-all-classes').style.display = 'none';
-        document.getElementById('view-single-class').style.display = 'block';
-        document.getElementById('sidebar-all-classes').style.display = 'none';
-        document.getElementById('sidebar-single-class').style.display = 'block';
+    const url = new URL(window.location);
+    url.searchParams.set('class_id', classId);
+    window.history.pushState({}, '', url);
 
+    document.getElementById('view-all-classes').style.display = 'none';
+    document.getElementById('view-single-class').style.display = 'block';
+    document.getElementById('sidebar-all-classes').style.display = 'none';
+    document.getElementById('sidebar-single-class').style.display = 'block';
         const { data: cls } = await supabaseClient.from('classes').select('*').eq('id', classId).single();
         if(cls) {
             document.getElementById('bannerTitle').innerText = cls.title;
@@ -322,9 +365,13 @@ session_start();
         document.querySelectorAll('.active-tab-content').forEach(e => e.style.display = 'none');
         if(tab === 'stream') document.getElementById('streamSection').style.display = 'block';
         if(tab === 'classwork') document.getElementById('classworkSection').style.display = 'block';
+        if(tab === 'people') {
+            document.getElementById('peopleSection').style.display = 'block';
+            fetchPeople();
+        }
     }
 
-    // --- DATA FETCHING ---
+    // --- DATA FETCHING (UPDATED WITH BUTTONS) ---
     async function fetchClasses() {
         const grid = document.getElementById('classGrid');
         const loader = document.getElementById('loadingMsg');
@@ -350,20 +397,63 @@ session_start();
         data.forEach((cls, idx) => {
             const card = document.createElement('div');
             card.className = 'class-card';
-            card.onclick = () => openClass(cls.id);
             
+            // Buttons logic + Click wrapper for class open
             card.innerHTML = `
-                <div class="class-image"><img src="${imgs[idx % imgs.length]}"></div>
-                <div class="class-text-content">
-                    <div class="class-title">${cls.title}</div>
-                    <div class="class-subtitle">${cls.section}</div>
+                <div class="card-actions">
+                    <div class="action-icon icon-edit" onclick="openEditModal('${cls.id}', '${cls.title}', '${cls.section}')">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                    <div class="action-icon icon-del" onclick="deleteClass('${cls.id}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </div>
+                </div>
+                <div onclick="openClass(${cls.id})">
+                    <div class="class-image"><img src="${imgs[idx % imgs.length]}"></div>
+                    <div class="class-text-content">
+                        <div class="class-title">${cls.title}</div>
+                        <div class="class-subtitle">${cls.section}</div>
+                    </div>
                 </div>
             `;
             grid.appendChild(card);
         });
     }
 
-    // --- FETCH CLASSWORK (Updated to use Elements) ---
+    // --- NEW: EDIT & DELETE LOGIC ---
+    function openEditModal(id, title, section) {
+        document.getElementById('editClassId').value = id;
+        document.getElementById('editClassName').value = title;
+        document.getElementById('editClassSection').value = section;
+        document.getElementById('editClassModal').style.display = 'flex';
+    }
+
+    async function saveClassRename() {
+        const id = document.getElementById('editClassId').value;
+        const title = document.getElementById('editClassName').value;
+        const section = document.getElementById('editClassSection').value;
+
+        if(!title) return alert("Class name required");
+
+        const { error } = await supabaseClient.from('classes').update({ title, section }).eq('id', id);
+        
+        if(error) alert("Error: " + error.message);
+        else {
+            closeAllModals();
+            fetchClasses();
+        }
+    }
+
+    async function deleteClass(classId) {
+        if(!confirm("Are you sure you want to delete this class? This cannot be undone.")) return;
+        
+        const { error } = await supabaseClient.from('classes').delete().eq('id', classId);
+        
+        if(error) alert("Error deleting class: " + error.message);
+        else fetchClasses();
+    }
+
+    // --- FETCH CLASSWORK ---
     async function fetchClasswork() {
         const { data } = await supabaseClient.from('classwork')
             .select('*').eq('class_id', currentClassId)
@@ -382,11 +472,10 @@ session_start();
             return;
         }
         
-        // Loop and Create Elements
         data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'stream-item';
-            div.onclick = () => showDetail(item); // CLICK HANDLER ADDED
+            div.onclick = () => showDetail(item);
 
             let icon = 'fa-file-lines';
             let color = 'icon-assign';
@@ -400,19 +489,55 @@ session_start();
                 </div>
             `;
             
-            // Clone for the second list
             const divClone = div.cloneNode(true);
-            divClone.onclick = () => {
-                switchTab('classwork'); // If clicked from stream, switch tab
-                showDetail(item);
-            };
+            divClone.onclick = () => { switchTab('classwork'); showDetail(item); };
 
             items.appendChild(div);
             list.appendChild(divClone);
         });
     }
 
-    // --- SHOW DETAIL (The Logic You Were Missing) ---
+    // --- FETCH PEOPLE ---
+    async function fetchPeople() {
+        const teacherArea = document.getElementById('teacherListArea');
+        const studentArea = document.getElementById('studentListArea');
+
+        const { data: classData } = await supabaseClient.from('classes').select(`teacher_id, teacher:profiles!teacher_id (full_name)`).eq('id', currentClassId).single();
+
+        if (classData) {
+            const tName = Array.isArray(classData.teacher) ? classData.teacher[0]?.full_name : classData.teacher?.full_name;
+            teacherArea.innerHTML = `
+                <h2 style="color:#1a73e8; font-size: 30px; font-weight:400; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">Teachers</h2>
+                <div style="display:flex; align-items:center; gap:15px; padding: 10px 0;">
+                    <div style="width:40px; height:40px; background:#e0e0e0; border-radius:50%; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-user"></i></div>
+                    <span style="font-weight:500; font-size: 16px;">${tName || 'Unknown'}</span>
+                </div>`;
+        }
+
+        const { data: students } = await supabaseClient.from('enrollments').select(`student:profiles (full_name)`).eq('class_id', currentClassId);
+
+        let sHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">
+                <h2 style="color:#1a73e8; font-size: 30px; font-weight:400; margin:0;">Students</h2>
+                <span style="color:#1a73e8; font-weight:500;">${students ? students.length : 0} students</span>
+            </div>`;
+
+        if (students && students.length > 0) {
+            students.forEach(item => {
+                const name = (Array.isArray(item.student) ? item.student[0]?.full_name : item.student?.full_name) || "Student";
+                sHtml += `
+                    <div style="display:flex; align-items:center; gap:15px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                        <div style="width:35px; height:35px; background:#1967d2; color:white; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:14px;">${name.charAt(0).toUpperCase()}</div>
+                        <span style="font-weight:500; color:#3c4043;">${name}</span>
+                    </div>`;
+            });
+        } else {
+            sHtml += `<div style="color:#777; font-style:italic;">No students enrolled yet.</div>`;
+        }
+        studentArea.innerHTML = sHtml;
+    }
+
+    // --- SHOW DETAIL ---
     function showDetail(item) {
         document.getElementById('streamListView').style.display = 'none';
         document.getElementById('detailView').style.display = 'block';
@@ -420,30 +545,23 @@ session_start();
         
         let content = `<p style="font-size:1.1rem; color:#555;">${item.description || ''}</p>`;
         
-        // Show Due Date
         if (item.due_date) {
             content += `<p style="color:#e37400; font-weight:500;"><i class="fa-regular fa-clock"></i> Due: ${new Date(item.due_date).toLocaleString()}</p>`;
         }
 
-        // Show AI Quiz Questions
         if(item.type === 'quiz' && item.quiz_data) {
             let questions = item.quiz_data;
-            // Parse if string
-            if (typeof questions === 'string') {
-                try { questions = JSON.parse(questions); } catch(e) {}
-            }
+            if (typeof questions === 'string') { try { questions = JSON.parse(questions); } catch(e) {} }
 
             if (Array.isArray(questions)) {
                 content += `<div style="margin-top:20px;">`;
                 questions.forEach((q, i) => {
-                    // Create options
                     let opts = '';
                     if(Array.isArray(q.options)) {
                         opts = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
                             ${q.options.map(o => `<div style="background:#f8f9fa; padding:10px; border:1px solid #ddd; border-radius:4px;">${o}</div>`).join('')}
                         </div>`;
                     }
-
                     content += `
                         <div style="background:white; padding:20px; border:1px solid #eee; border-radius:8px; margin-bottom:15px;">
                             <div style="font-weight:600; font-size:16px;">${i+1}. ${q.question}</div>
@@ -454,7 +572,6 @@ session_start();
                 content += `</div>`;
             }
         }
-        
         document.getElementById('detBody').innerHTML = content;
     }
 
@@ -468,7 +585,6 @@ session_start();
         const title = document.getElementById('newClassName').value;
         const section = document.getElementById('newClassSection').value;
         if(!title) return alert("Required");
-        
         await supabaseClient.from('classes').insert([{ teacher_id: currentUser.id, title, section }]);
         closeAllModals();
         fetchClasses();
@@ -478,17 +594,10 @@ session_start();
         const title = document.getElementById('asTitle').value;
         const desc = document.getElementById('asInstr').value;
         const due = document.getElementById('asDueDate').value;
-        
         if(!title) return alert("Required");
-        
         await supabaseClient.from('classwork').insert([{
-            teacher_id: currentUser.id,
-            class_id: currentClassId,
-            type: 'assignment',
-            title, description: desc,
-            due_date: due ? new Date(due).toISOString() : null
+            teacher_id: currentUser.id, class_id: currentClassId, type: 'assignment', title, description: desc, due_date: due ? new Date(due).toISOString() : null
         }]);
-        
         closeAllModals();
         fetchClasswork();
     }
@@ -509,13 +618,7 @@ session_start();
             
             if(result.success) {
                 await supabaseClient.from('classwork').insert([{
-                    teacher_id: currentUser.id,
-                    class_id: currentClassId,
-                    type: 'quiz',
-                    title: 'Quiz: ' + file.name,
-                    description: 'AI Generated',
-                    file_name: file.name,
-                    quiz_data: result.questions
+                    teacher_id: currentUser.id, class_id: currentClassId, type: 'quiz', title: 'Quiz: ' + file.name, description: 'AI Generated', file_name: file.name, quiz_data: result.questions
                 }]);
                 closeAllModals();
                 fetchClasswork();
