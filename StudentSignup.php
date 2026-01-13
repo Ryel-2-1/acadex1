@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Portal - Sign Up</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
         /* --- General Reset --- */
         * {
@@ -103,7 +102,7 @@
         .btn-signup:hover {
             background-color: #009624;
         }
-
+        
         /* --- Divider --- */
         .divider-container {
             display: flex;
@@ -121,7 +120,7 @@
             padding: 0 10px;
             background: white;
         }
-
+        
         .btn-login {
             display: block;
             width: 100%;
@@ -147,12 +146,12 @@
             border-radius: 6px;
             font-size: 14px;
         }
-        .success {
+        #api-message.success {
             background-color: #e8f5e9;
             color: #2e7d32;
             border: 1px solid #c8e6c9;
         }
-        .error {
+        #api-message.error {
             background-color: #ffebee;
             color: #c62828;
             border: 1px solid #ffcdd2;
@@ -217,21 +216,24 @@
     <a href="student_login.php" class="btn-login">Go to Student Login</a>
 </div>
 
+<!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-    // 1. Initialize Supabase client
+    // 1. Initialize Supabase Client using Azure/.env vars
     const supabaseUrl = "<?php echo $_ENV['SUPABASE_URL'] ?? ''; ?>";
     const supabaseKey = "<?php echo $_ENV['SUPABASE_KEY'] ?? ''; ?>";
-    const _supabase  = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const _supabase   = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    console.log("Supabase URL:", supabaseUrl);
+    console.log("Supabase key length:", supabaseKey.length);
 
     const signupForm = document.getElementById('signupForm');
     const msgBox     = document.getElementById('api-message');
     const submitBtn  = document.getElementById('submitBtn');
 
     function showMessage(text, type) {
-        msgBox.textContent = text;
-        msgBox.className   = type;  // "error" or "success"
+        msgBox.textContent   = text;
+        msgBox.className     = type;  // 'success' or 'error'
         msgBox.style.display = 'block';
     }
 
@@ -244,11 +246,13 @@
         const confirmPassword = document.getElementById('confirm-password').value;
 
         msgBox.style.display = 'none';
+        msgBox.className     = '';
 
         if (!fullName || !email || !password || !confirmPassword) {
             showMessage("Please fill in all fields.", "error");
             return;
         }
+
         if (password !== confirmPassword) {
             showMessage("Passwords do not match.", "error");
             return;
@@ -258,76 +262,82 @@
         submitBtn.innerText = "Creating Account...";
 
         try {
-            // 2. Sign up in Supabase Auth
+            // 1. Create Supabase Auth user
             const { data: authData, error: authError } = await _supabase.auth.signUp({
                 email,
                 password,
-                options: {
-                    data: { full_name: fullName }
-                }
+                options: { data: { full_name: fullName } }
             });
 
+            console.log("authData:", authData, "authError:", authError);
+
             if (authError) {
-                // email already in auth.users
-                if (authError.message.toLowerCase().includes("already registered")) {
+                // If user already exists in auth.users
+                if (authError.message && authError.message.toLowerCase().includes("already registered")) {
                     showMessage("User already registered. Please log in instead.", "error");
                     return;
                 }
-                throw authError;
-            }
-
-            const user = authData?.user;
-            if (!user) {
-                throw new Error("Sign up failed – no user returned.");
-            }
-
-            // 3. Optional: check if profile already exists for this id
-            const { data: existing, error: checkError } = await _supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (checkError) throw checkError;
-
-            if (existing) {
-                // profile row already there → don't insert again
-                showMessage("Profile already exists. Please log in.", "error");
+                showMessage(authError.message || "Error creating user.", "error");
                 return;
             }
 
-            // 4. Create profile row
-            const { error: profileError } = await _supabase
-                .from('profiles')
-                .insert({
-                    id: user.id,        // FK to auth.users.id (PK in profiles)
-                    full_name: fullName,
-                    email: email,
-                    role: 'student'
-                });
-
-            if (profileError) {
-                // handle primary-key duplicate just in case
-                if (profileError.code === '23505') {
-                    showMessage("Profile already exists. Please log in.", "error");
-                    return;
-                }
-                throw profileError;
+            if (!authData || !authData.user) {
+                showMessage("Sign up failed – no user returned.", "error");
+                return;
             }
 
-            showMessage("Registration successful! Please check your email, then log in.", "success");
+            const user = authData.user;
+
+            // 2. Check if a profile row already exists (trigger may have created it)
+            const { data: existingProfile, error: fetchError } = await _supabase
+                .from('profiles')
+                .select('id, role')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            console.log("existingProfile:", existingProfile, "fetchError:", fetchError);
+
+            if (fetchError && fetchError.code !== 'PGRST116') { // ignore "No rows found" code
+                throw fetchError;
+            }
+
+            if (!existingProfile) {
+                // No profile row yet → insert new
+                const { error: insertError } = await _supabase
+                    .from('profiles')
+                    .insert({
+                        id: user.id,
+                        full_name: fullName,
+                        email: email,
+                        role: 'student'
+                    });
+
+                console.log("insertError:", insertError);
+                if (insertError) throw insertError;
+            } else {
+                // Row exists (probably from Supabase trigger) → make sure role + name are set
+                const { error: updateError } = await _supabase
+                    .from('profiles')
+                    .update({
+                        full_name: fullName,
+                        email: email,
+                        role: 'student'
+                    })
+                    .eq('id', user.id);
+
+                console.log("updateError:", updateError);
+                if (updateError) throw updateError;
+            }
+
+            showMessage("Registered successfully! Please check your email then log in.", "success");
 
             setTimeout(() => {
                 window.location.href = "student_login.php";
-            }, 2500);
+            }, 2000);
 
         } catch (err) {
             console.error("Signup error:", err);
-
-            // show error only if we didn't already show a friendlier one above
-            if (!msgBox.textContent || msgBox.className === "") {
-                showMessage(err.message || "An error occurred while signing up.", "error");
-            }
+            showMessage(err.message || "An unexpected error occurred.", "error");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = "Sign up";
