@@ -356,50 +356,18 @@ session_start();
     const supabaseUrl = "<?= getenv('SUPABASE_URL') ?>";
     const supabaseKey = "<?= getenv('SUPABASE_KEY') ?>";
 
-    console.log('Supabase URL present?', !!supabaseUrl);
-    console.log('Supabase KEY present?', !!supabaseKey);
+    console.log("🔍 Supabase URL:", supabaseUrl);
+    console.log("🔍 Supabase Key Exists?:", supabaseKey ? "YES" : "NO");
 
     let supabaseClient;
-    
-    let currentUser = null; 
-    let currentClassId = null;
-    let userFullName = "Teacher"; 
-    let jitsiApi = null;
-
-    let latestGeneratedQuestions = [];
-    let latestQuizFileName = '';
-
     try {
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        console.log("✅ Supabase client created");
     } catch (e) {
-        console.error('Error creating Supabase client:', e);
+        console.error("❌ Supabase init error:", e);
     }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        if (!supabaseUrl || !supabaseKey) {
-            alert("Supabase config missing on server. Check Azure environment variables.");
-            return;
-        }
-
-        const { data: { session }, error } = await supabaseClient.auth.getSession();
-        if (error) {
-            console.error('getSession error:', error);
-        }
-        if (!session) {
-            window.location.href = 'teacher_login.php';
-            return;
-        }
-
-        currentUser = session.user;
-        await fetchUserProfile();
-        document.getElementById('global-loader').style.display = 'none';
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const cid = urlParams.get('class_id');
-        if (cid) openClass(cid); 
-        else fetchClasses(); 
-    });
 </script>
+  
 
     async function fetchUserProfile() {
         try {
