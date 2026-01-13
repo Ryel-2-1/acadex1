@@ -17,6 +17,25 @@ session_start();
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
+        /* --- Logout Button Style --- */
+.logout-btn {
+    margin-left: 15px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+
+.logout-btn:hover {
+    color: #e74c3c; /* Red color on hover */
+    transform: scale(1.1);
+}
         /* --- General Reset --- */
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f5f7fa; color: #333; }
         * { box-sizing: border-box; }
@@ -107,12 +126,15 @@ session_start();
             <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
         </nav>
         <div class="profile-section">
-            <div style="text-align:right;">
-                <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
-                <span style="font-size:12px; color:#777;">Teacher</span>
-            </div>
-            <div class="avatar"></div>
-        </div>
+    <div style="text-align:right;">
+        <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+        <span style="font-size:12px; color:#777;">Teacher</span>
+    </div>
+    <div class="avatar"></div>
+    <button class="logout-btn" onclick="handleLogout()" title="Logout">
+        <i class="fa-solid fa-right-from-bracket"></i>
+    </button>
+</div>
     </header>
 
     <main>
@@ -277,6 +299,22 @@ session_start();
             grid.appendChild(div);
         }
     }
+    async function handleLogout() {
+    if (confirm("Are you sure you want to log out?")) {
+        try {
+            // If using Supabase Auth
+            if (supabaseClient.auth) {
+                await supabaseClient.auth.signOut();
+            }
+            // Redirect to login page
+            window.location.href = 'index.php';
+        } catch (err) {
+            console.error("Logout Error:", err);
+            // Fallback redirect
+            window.location.href = 'index.php';
+        }
+    }
+}
 </script>
 </body>
 </html> 

@@ -30,7 +30,26 @@ session_start();
     .nav-links { display: flex; gap: 30px; height: 100%; }
     .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; height: 100%; cursor: pointer; }
     .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
-    .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
+    /* --- Logout Button Style --- */
+.logout-btn {
+    margin-left: 15px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+.logout-btn:hover {
+    color: #e74c3c;
+    transform: scale(1.1);
+}
+/* Ensure profile section matches Dashboard */
+.profile-section { display: flex; align-items: center; gap: 12px; width: auto; justify-content: flex-end; }
     .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
 
     /* --- LAYOUT --- */
@@ -99,17 +118,27 @@ session_start();
 </head>
 <body>
 
-    <header>
-        <div class="logo-section" onclick="window.location.href='Dashboard.php'">
-            <i class="fa-solid fa-book-open logo-icon"></i><span class="logo-text">TechHub</span>
+  <header>
+    <div class="logo-section" onclick="window.location.href='Dashboard.php'">
+        <i class="fa-solid fa-book-open logo-icon"></i>
+        <span class="logo-text">TechHub</span>
+    </div>
+    <nav class="nav-links">
+        <a href="Dashboard.php" class="nav-item"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+        <a href="Classwork.php" class="nav-item active"><i class="fa-solid fa-book"></i> Classes</a>
+        <a href="gradebook.php" class="nav-item"><i class="fa-solid fa-graduation-cap"></i> Gradebook</a>
+    </nav>
+    <div class="profile-section">
+        <div style="text-align:right;">
+            <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+            <span style="font-size:12px; color:#777;">Teacher</span>
         </div>
-        <nav class="nav-links">
-            <a href="Dashboard.php" class="nav-item">Dashboard</a>
-            <a href="Classwork.php" class="nav-item active">Classes</a>
-            <a href="gradebook.php" class="nav-item">Gradebook</a>
-        </nav>
-        <div class="profile-section"><div class="avatar"></div></div>
-    </header>
+        <div class="avatar"></div>
+        <button class="logout-btn" onclick="handleLogout()" title="Logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+</header>
 
     <div class="app-layout">
         <aside class="sidebar">
@@ -518,6 +547,22 @@ session_start();
             if (dropdown) dropdown.style.display = 'none';
         }
     };
+    async function handleLogout() {
+    if (confirm("Are you sure you want to log out?")) {
+        try {
+            // If using Supabase Auth
+            if (supabaseClient.auth) {
+                await supabaseClient.auth.signOut();
+            }
+            // Redirect to login page
+            window.location.href = 'index.php';
+        } catch (err) {
+            console.error("Logout Error:", err);
+            // Fallback redirect
+            window.location.href = 'index.php';
+        }
+    }
+}
 </script>
 </body>
 </html>
