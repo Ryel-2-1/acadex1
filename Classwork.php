@@ -550,6 +550,19 @@ session_start();
 
     function closeGradingModal() { document.getElementById('gradingModal').style.display = 'none'; }
 
+    // Open the Create Class modal (was missing)
+    function openClassModal() {
+        // Reset inputs
+        const nameEl = document.getElementById('newClassName');
+        const sectionEl = document.getElementById('newClassSection');
+        if (nameEl) { nameEl.value = ''; nameEl.focus(); }
+        if (sectionEl) sectionEl.value = '';
+
+        // Show modal (use flex for centering like other modals)
+        const modal = document.getElementById('createClassModal');
+        if (modal) modal.style.display = 'flex';
+    }
+    
    async function createClass() {
         const title = document.getElementById('newClassName').value;
         const section = document.getElementById('newClassSection').value;
