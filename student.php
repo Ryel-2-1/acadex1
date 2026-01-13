@@ -7,12 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        #jitsiModal .modal-header {
-    position: relative;
-    z-index: 10001; /* Higher than Jitsi */
-    background: white;
-    border-bottom: 1px solid #ddd;
-}
         /* --- GLOBAL STYLES --- */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #ffffff; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
@@ -158,7 +152,9 @@
             <div class="sidebar-item" id="nav-unenroll" onclick="setView('unenrolled')">
                 <i class="fa-solid fa-user-xmark"></i> Unenrolled Classes
             </div>
-           
+            <div class="sidebar-item" id="tab-attendance" onclick="switchTab('attendance')">
+    <i class="fa-solid fa-clock-rotate-left"></i> Attendance
+</div>
         </aside>
 
         <main class="main-content" id="main-content"></main>
@@ -442,45 +438,36 @@
                 </div>
             `;
         }
-let studentJitsiApi = null;
+
+        let studentJitsiApi = null;
 let currentAttendanceId = null;
-let currentAttendanceTimeIn = null; // Added this variable
 
 async function joinMeeting() {
     document.getElementById('jitsiModal').style.display = 'flex';
     const roomName = "TechHub_Room_" + currentClassId;
     
     // 1. Record Time In
-    currentAttendanceTimeIn = new Date(); // Set the start time
     const { data, error } = await _supabase
         .from('attendance')
         .insert([{ 
             class_id: currentClassId, 
             student_id: currentUser.id, 
-            time_in: currentAttendanceTimeIn.toISOString() 
+            time_in: new Date().toISOString() 
         }])
         .select();
 
-    if (data && data.length > 0) currentAttendanceId = data[0].id;
+    if (data) currentAttendanceId = data[0].id;
 
     // 2. Initialize Jitsi
     const options = {
         roomName: roomName,
-        width: "100%",
-        height: "100%",
         parentNode: document.querySelector('#jitsi-container'),
-        userInfo: { displayName: currentUser.email.split('@')[0] },
-        configOverwrite: {
-            prejoinPageEnabled: false
-        }
+        userInfo: { displayName: currentUser.email.split('@')[0] } 
     };
-    
-    // Dispose if already exists
-    if (studentJitsiApi) studentJitsiApi.dispose();
     
     studentJitsiApi = new JitsiMeetExternalAPI("meet.ffmuc.net", options);
 
-    // Auto-close if they click the red "Hangup" button inside Jitsi UI
+    // Auto-close if they click "Hangup" inside Jitsi
     studentJitsiApi.addEventListener('videoConferenceLeft', () => {
         closeStudentJitsi();
     });
@@ -491,34 +478,27 @@ async function closeStudentJitsi() {
         if (currentAttendanceId && currentAttendanceTimeIn) {
             const timeOutDate = new Date();
             const diffMs = timeOutDate.getTime() - currentAttendanceTimeIn.getTime();
-            const minutes = Math.round((diffMs / 60000) * 100) / 100;
+            const minutes = Math.round((diffMs / 60000) * 100) / 100; // 2 decimal places
 
             await _supabase
                 .from('attendance')
                 .update({
                     time_out: timeOutDate.toISOString(),
-                    total_minutes: minutes 
+                    total_minutes: minutes          // <-- important: total_minutes
                 })
                 .eq('id', currentAttendanceId);
         }
     } catch (e) {
         console.error("Error updating attendance:", e);
     } finally {
-        // Reset variables
         currentAttendanceId = null;
         currentAttendanceTimeIn = null;
 
-        // Corrected variable name from jitsiApi to studentJitsiApi
-        if (studentJitsiApi) {
-            studentJitsiApi.dispose();
-            studentJitsiApi = null;
+        if (jitsiApi) {
+            jitsiApi.dispose();
+            jitsiApi = null;
         }
-        
-        // Hide modal
-        document.getElementById('jitsiModal').style.display = 'none';
-        
-        // Clear the container so it doesn't leave ghosts
-        document.getElementById('jitsi-container').innerHTML = '';
+        document.getElementById('studentJitsiModal').style.display = 'none';
     }
 }
 
