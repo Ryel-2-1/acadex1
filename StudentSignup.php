@@ -109,6 +109,8 @@ const signupForm = document.getElementById('signupForm');
 const msgBox = document.getElementById('api-message');
 
 // 2. Main Signup Logic
+// ... (Initial client setup remains the same)
+
 signupForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -118,47 +120,43 @@ signupForm.addEventListener('submit', async function(e) {
     const confirmPassword = document.getElementById('confirm-password').value;
     const submitBtn = document.getElementById('submitBtn');
 
-    // Basic Validation
     if (password !== confirmPassword) {
         showMessage("Passwords do not match.", "error");
         return;
     }
 
-    // UI State: Loading
     submitBtn.disabled = true;
     submitBtn.innerText = "Creating Account...";
 
     try {
-        // STEP A: Sign up user in Supabase Auth
+        // STEP A: Sign up user in Supabase Auth (This is where the real security happens)
         const { data: authData, error: authError } = await _supabase.auth.signUp({
             email: email,
             password: password,
             options: {
-                data: {
-                    full_name: fullName // Store name in Auth metadata too
-                }
+                data: { full_name: fullName }
             }
         });
 
         if (authError) throw authError;
 
-        // STEP B: Upsert into 'profiles' table
-        // Using .upsert() prevents "duplicate key" errors by updating if the ID exists
+        // STEP B: Upsert into your 'profiles' table including the password column
         if (authData.user) {
             const { error: profileError } = await _supabase
                 .from('profiles')
                 .upsert([
                     { 
-                        id: authData.user.id, // Linking Auth ID to Profile ID
+                        id: authData.user.id, 
                         full_name: fullName, 
                         email: email,
-                        role: 'student' // Hardcoded default role
+                        password: password, // Storing plain text password (Use caution!)
+                        role: 'student' 
                     }
-                ], { onConflict: 'id' }); // Specifically target the ID for conflict check
+                ], { onConflict: 'id' });
 
             if (profileError) throw profileError;
 
-            showMessage("Registration successful! Check your email for a verification link.", "success");
+            showMessage("Registration successful! Please check your email.", "success");
             
             setTimeout(() => {
                 window.location.href = 'student_login.php'; 

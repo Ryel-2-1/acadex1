@@ -1,12 +1,3 @@
-<?php
-session_start();
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Verify credentials here
-    $_SESSION['user_role'] = 'student';
-    header("Location: student.php"); 
-    exit();
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +6,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Student Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Container for error messages */
+        #login-error {
+            display: none;
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border: 1px solid #ffcdd2;
+        }
+    </style>
 </head>
 <body>
     <div class="login-container">
@@ -25,27 +29,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         
         <div class="login-card">
-            <form method="POST">
+            <div id="login-error"></div>
+
+            <form id="loginForm">
                 <label>Email Address</label>
                 <div class="input-group">
                     <i class="fa-regular fa-envelope"></i>
-                    <input type="email" name="email" placeholder="Sample@Student.edu" required>
+                    <input type="email" id="email" placeholder="Sample@Student.edu" required>
                 </div>
                 
                 <label>Password</label>
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" name="password" placeholder="******************" required>
+                    <input type="password" id="password" placeholder="******************" required>
                 </div>
 
                 <div class="actions-row">
                     <label class="remember-me">
-                        <input type="checkbox" name="remember"> Remember me
+                        <input type="checkbox" id="remember"> Remember me
                     </label>
                     <a href="#" class="forget-pass">Forget Password?</a>
                 </div>
 
-                <button type="submit" class="btn-primary">Sign in</button>
+                <button type="submit" class="btn-primary" id="loginBtn">Sign in</button>
                 
                 <div class="divider"><span class="divider-text">Are you a Teacher?</span></div>
                 
@@ -57,22 +63,89 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </form>
         </div>
     </div>
-	<script>
-    document.querySelector('form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const email = document.querySelector('input[name="email"]').value;
-        const password = document.querySelector('input[name="password"]').value;
 
-        const res = await fetch('api_auth.php?action=login', {
-            method: 'POST',
-            body: JSON.stringify({ email: email, password: password, role: 'student' })
-        });
-        const data = await res.json();
+   <div id="login-error"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // 1. Initialize Supabase
+    const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    const loginForm = document.getElementById('loginForm');
+    const errorBox = document.getElementById('login-error');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // 2. Login Logic
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        if(data.status === 'success') {
-            window.location.href = data.redirect;
-        } else {
-            alert(data.message);
+        // Reset UI
+        errorBox.style.display = 'none';
+        errorBox.innerHTML = ''; 
+        loginBtn.disabled = true;
+        loginBtn.innerText = "Signing in...";
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // STEP A: Authenticate with Supabase
+            const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            // Handle Authentication Errors
+            if (authError) {
+                // Specific check for unconfirmed email
+                if (authError.message.includes("Email not confirmed")) {
+                    errorBox.innerHTML = `Email not confirmed. <a href="#" id="resend-link" style="color: #c62828; font-weight: bold; text-decoration: underline;">Resend verification?</a>`;
+                    errorBox.style.display = 'block';
+                    
+                    // Add listener to the dynamic resend link
+                    document.getElementById('resend-link').addEventListener('click', async (linkEvent) => {
+                        linkEvent.preventDefault();
+                        const { error: resendError } = await _supabase.auth.resend({
+                            type: 'signup',
+                            email: email,
+                        });
+                        if (resendError) alert("Error resending: " + resendError.message);
+                        else alert("Verification email resent! Please check your inbox.");
+                    });
+                } else {
+                    throw authError;
+                }
+                return; // Stop execution if email is unconfirmed
+            }
+
+            // STEP B: Role Check (Fetch from your 'profiles' table)
+            const { data: profile, error: profileError } = await _supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', authData.user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // STEP C: Verify Role is 'student'
+            if (profile.role !== 'student') {
+                await _supabase.auth.signOut(); // Log them out immediately
+                throw new Error("Access Denied: This account is not registered as a student.");
+            }
+
+            // SUCCESS: Redirect to dashboard
+            window.location.href = 'student.php';
+
+        } catch (err) {
+            console.error('Login error:', err);
+            errorBox.textContent = err.message;
+            errorBox.style.display = 'block';
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerText = "Sign in";
         }
     });
 </script>
