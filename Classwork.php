@@ -1042,17 +1042,7 @@ session_start();
         if (prompt) prompt.focus();
     }
 
-    function switchTab(tab) {
-        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
-        document.getElementById('tab-'+tab).classList.add('active');
-        document.querySelectorAll('.active-tab-content').forEach(e => e.style.display = 'none');
-        if(tab === 'stream') document.getElementById('streamSection').style.display = 'block';
-        if(tab === 'classwork') document.getElementById('classworkSection').style.display = 'block';
-        if(tab === 'people') {
-            document.getElementById('peopleSection').style.display = 'block';
-            fetchPeople();
-        }
-    }
+   
 
     async function fetchPeople() {
         const teacherArea = document.getElementById('teacherListArea');
@@ -1099,29 +1089,53 @@ async function fetchAttendance() {
     const tbody = document.getElementById('attendanceBody');
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Loading attendance...</td></tr>';
 
-    const { data, error } = await supabaseClient
+    // 1) Get attendance rows for this class
+    const { data: rows, error } = await supabaseClient
         .from('attendance')
-        .select('time_in, time_out, total_minutes, student:profiles(full_name)')
+        .select('id, class_id, student_id, time_in, time_out, total_minutes')
         .eq('class_id', currentClassId)
         .order('time_in', { ascending: false });
 
     if (error) {
-        console.error(error);
+        console.error('Attendance error:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Error loading data.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = '';
-    if (!data || data.length === 0) {
+    if (!rows || rows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No attendance records found.</td></tr>';
         return;
     }
 
-    data.forEach(record => {
-        const studentObj = Array.isArray(record.student) ? record.student[0] : record.student;
-        const studentName = (studentObj && studentObj.full_name) ? studentObj.full_name : 'Student';
+    // 2) Fetch student names from profiles in one query
+    const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
 
-        const timeInStr = record.time_in ? new Date(record.time_in).toLocaleString() : '--';
+    let profilesById = {};
+    if (studentIds.length > 0) {
+        const { data: profiles, error: pErr } = await supabaseClient
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', studentIds);
+
+        if (pErr) {
+            console.error('Profiles error:', pErr);
+        } else {
+            profiles.forEach(p => {
+                profilesById[p.id] = p.full_name;
+            });
+        }
+    }
+
+    // 3) Render table
+    tbody.innerHTML = '';
+
+    rows.forEach(record => {
+        const studentName = profilesById[record.student_id] || 'Student';
+
+        const timeInStr = record.time_in
+            ? new Date(record.time_in).toLocaleString()
+            : '--';
+
         const timeOutStr = record.time_out
             ? new Date(record.time_out).toLocaleString()
             : '<span style="color:green;">In meeting</span>';
@@ -1130,7 +1144,7 @@ async function fetchAttendance() {
         if (record.total_minutes != null) {
             durationStr = `${record.total_minutes} mins`;
         } else if (record.time_in && record.time_out) {
-            // fallback: compute on the fly if needed
+            // Fallback: compute on the fly if total_minutes is null
             const diffMs = new Date(record.time_out) - new Date(record.time_in);
             const mins = Math.round((diffMs / 60000) * 100) / 100;
             durationStr = `${mins} mins`;
@@ -1148,19 +1162,32 @@ async function fetchAttendance() {
     });
 }
 
+
 function switchTab(tabName) {
     // Hide all tab contents
     document.querySelectorAll('.active-tab-content').forEach(el => el.style.display = 'none');
+    // Remove active from all sidebar items
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
 
-    // Show selected
-    document.getElementById(tabName + 'Section').style.display = 'block';
-    document.getElementById('tab-' + tabName).classList.add('active');
+    // Show the selected section
+    const section = document.getElementById(tabName + 'Section');
+    if (section) section.style.display = 'block';
 
-    if (tabName === 'attendance') {
+    // Mark the selected tab as active
+    const tabItem = document.getElementById('tab-' + tabName);
+    if (tabItem) tabItem.classList.add('active');
+
+    // Extra actions per tab
+    if (tabName === 'people') {
+        fetchPeople();
+    } else if (tabName === 'classwork' || tabName === 'stream') {
+        // both use classwork data (streamFeedArea + streamItemsArea)
+        fetchClasswork();
+    } else if (tabName === 'attendance') {
         fetchAttendance();
     }
 }
+
 </script>
 </body>
 </html>
