@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Portal - Sign Up</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         /* --- General Reset --- */
         * {
@@ -103,7 +103,7 @@
         .btn-signup:hover {
             background-color: #009624;
         }
-        
+
         /* --- Divider --- */
         .divider-container {
             display: flex;
@@ -121,7 +121,7 @@
             padding: 0 10px;
             background: white;
         }
-        
+
         .btn-login {
             display: block;
             width: 100%;
@@ -161,144 +161,178 @@
 </head>
 <body>
 
-    <div class="portal-card">
-        <i class="fa-solid fa-graduation-cap icon-header"></i>
-        <h1>Student Portal</h1>
-        <p class="subtitle">Sign up to manage your class and students.</p>
+<div class="portal-card">
+    <i class="fa-solid fa-graduation-cap icon-header"></i>
+    <h1>Student Portal</h1>
+    <p class="subtitle">Sign up to manage your class and students.</p>
 
-        <div id="api-message"></div>
+    <div id="api-message"></div>
 
-        <form id="signupForm">
-            <div class="form-group">
-                <label class="input-label">Full Name</label>
-                <div class="input-wrapper">
-                    <i class="fa-regular fa-user input-icon"></i>
-                    <input type="text" id="full_name" class="form-input"
-                           placeholder="John Doe" required>
-                </div>
+    <form id="signupForm">
+        <div class="form-group">
+            <label class="input-label">Full Name</label>
+            <div class="input-wrapper">
+                <i class="fa-regular fa-user input-icon"></i>
+                <input type="text" id="full_name" class="form-input"
+                       placeholder="John Doe" required>
             </div>
-
-            <div class="form-group">
-                <label class="input-label">Email Address</label>
-                <div class="input-wrapper">
-                    <i class="fa-regular fa-envelope input-icon"></i>
-                    <input type="email" id="email" class="form-input"
-                           placeholder="Sample@Student.edu" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="input-label">Create Password</label>
-                <div class="input-wrapper">
-                    <i class="fa-solid fa-lock input-icon"></i>
-                    <input type="password" id="password" class="form-input"
-                           placeholder="******************" required autocomplete="new-password">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="input-label">Confirm Password</label>
-                <div class="input-wrapper">
-                    <i class="fa-solid fa-lock input-icon"></i>
-                    <input type="password" id="confirm-password" class="form-input"
-                           placeholder="******************" required autocomplete="new-password">
-                </div>
-            </div>
-
-            <button type="submit" class="btn-signup" id="submitBtn">Sign up</button>
-        </form>
-
-        <div class="divider-container">
-            <div class="divider-line"></div>
-            <span class="divider-text">Already have an account?</span>
-            <div class="divider-line"></div>
         </div>
 
-        <a href="student_login.php" class="btn-login">Go to Student Login</a>
+        <div class="form-group">
+            <label class="input-label">Email Address</label>
+            <div class="input-wrapper">
+                <i class="fa-regular fa-envelope input-icon"></i>
+                <input type="email" id="email" class="form-input"
+                       placeholder="Sample@Student.edu" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="input-label">Create Password</label>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" id="password" class="form-input"
+                       placeholder="******************" required autocomplete="new-password">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="input-label">Confirm Password</label>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" id="confirm-password" class="form-input"
+                       placeholder="******************" required autocomplete="new-password">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-signup" id="submitBtn">Sign up</button>
+    </form>
+
+    <div class="divider-container">
+        <div class="divider-line"></div>
+        <span class="divider-text">Already have an account?</span>
+        <div class="divider-line"></div>
     </div>
 
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script>
-        // 1. Initialize Supabase Client using Azure/.env vars
-        const supabaseUrl  = "<?php echo $_ENV['SUPABASE_URL']  ?? ''; ?>";
-        const supabaseKey  = "<?php echo $_ENV['SUPABASE_KEY']  ?? ''; ?>";
-        const _supabase    = window.supabase.createClient(supabaseUrl, supabaseKey);
+    <a href="student_login.php" class="btn-login">Go to Student Login</a>
+</div>
 
-        const signupForm = document.getElementById('signupForm');
-        const msgBox     = document.getElementById('api-message');
-        const submitBtn  = document.getElementById('submitBtn');
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        function showMessage(text, type) {
-            msgBox.textContent = text;
-            msgBox.className   = type;
-            msgBox.style.display = 'block';
-        }
+<script>
+    // 1. Initialize Supabase client
+    const supabaseUrl = "<?php echo $_ENV['SUPABASE_URL'] ?? ''; ?>";
+    const supabaseKey = "<?php echo $_ENV['SUPABASE_KEY'] ?? ''; ?>";
+    const _supabase  = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        signupForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
+    const signupForm = document.getElementById('signupForm');
+    const msgBox     = document.getElementById('api-message');
+    const submitBtn  = document.getElementById('submitBtn');
 
-    const fullName = document.getElementById('full_name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm-password').value;
-
-    msgBox.style.display = 'none';
-
-    if (password !== confirmPassword) {
-        showMessage("Passwords do not match.", "error");
-        return;
+    function showMessage(text, type) {
+        msgBox.textContent = text;
+        msgBox.className   = type;  // "error" or "success"
+        msgBox.style.display = 'block';
     }
 
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Creating Account...";
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    try {
-        // 1. Create Supabase Auth user
-        const { data: authData, error: authError } = await _supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: { full_name: fullName }
-            }
-        });
+        const fullName        = document.getElementById('full_name').value.trim();
+        const email           = document.getElementById('email').value.trim();
+        const password        = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
 
-        if (authError) {
-            if (authError.message.includes("already registered")) {
-                showMessage("Email already registered. Please login instead.", "error");
-            } else {
-                showMessage(authError.message, "error");
-            }
-            throw authError;
+        msgBox.style.display = 'none';
+
+        if (!fullName || !email || !password || !confirmPassword) {
+            showMessage("Please fill in all fields.", "error");
+            return;
+        }
+        if (password !== confirmPassword) {
+            showMessage("Passwords do not match.", "error");
+            return;
         }
 
-        const user = authData.user;
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Creating Account...";
 
-        // 2. Insert profile entry
-        const { error: profileError } = await _supabase.from('profiles').insert({
-            id: user.id,
-            full_name: fullName,
-            email: email,
-            role: "student"
-        });
+        try {
+            // 2. Sign up in Supabase Auth
+            const { data: authData, error: authError } = await _supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: { full_name: fullName }
+                }
+            });
 
-        if (profileError) throw profileError;
+            if (authError) {
+                // email already in auth.users
+                if (authError.message.toLowerCase().includes("already registered")) {
+                    showMessage("User already registered. Please log in instead.", "error");
+                    return;
+                }
+                throw authError;
+            }
 
-        showMessage("Registered successfully! Please check your email then login.", "success");
+            const user = authData?.user;
+            if (!user) {
+                throw new Error("Sign up failed – no user returned.");
+            }
 
-        setTimeout(() => {
-            window.location.href = "student_login.php";
-        }, 2000);
+            // 3. Optional: check if profile already exists for this id
+            const { data: existing, error: checkError } = await _supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', user.id)
+                .maybeSingle();
 
-    } catch (err) {
-        console.error(err);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Sign up";
-    }
-});
+            if (checkError) throw checkError;
 
-    </script>
+            if (existing) {
+                // profile row already there → don't insert again
+                showMessage("Profile already exists. Please log in.", "error");
+                return;
+            }
+
+            // 4. Create profile row
+            const { error: profileError } = await _supabase
+                .from('profiles')
+                .insert({
+                    id: user.id,        // FK to auth.users.id (PK in profiles)
+                    full_name: fullName,
+                    email: email,
+                    role: 'student'
+                });
+
+            if (profileError) {
+                // handle primary-key duplicate just in case
+                if (profileError.code === '23505') {
+                    showMessage("Profile already exists. Please log in.", "error");
+                    return;
+                }
+                throw profileError;
+            }
+
+            showMessage("Registration successful! Please check your email, then log in.", "success");
+
+            setTimeout(() => {
+                window.location.href = "student_login.php";
+            }, 2500);
+
+        } catch (err) {
+            console.error("Signup error:", err);
+
+            // show error only if we didn't already show a friendlier one above
+            if (!msgBox.textContent || msgBox.className === "") {
+                showMessage(err.message || "An error occurred while signing up.", "error");
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Sign up";
+        }
+    });
+</script>
 </body>
 </html>
