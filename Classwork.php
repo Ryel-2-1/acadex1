@@ -1,10 +1,5 @@
 <?php
 session_start();
-// Security Check
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teacher') {
-//    header("Location: teacher_login.php");
-//    exit();
-// }
 ?>
 
 <!DOCTYPE html>
@@ -15,7 +10,7 @@ session_start();
 <title>TechHub - Classes</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://meet.jit.si/external_api.js"></script>
+<script src="https://meet.ffmuc.net/external_api.js"></script>
 
 <style>
     /* --- GENERAL RESET --- */
@@ -31,7 +26,9 @@ session_start();
     .nav-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: #666; font-weight: 500; height: 100%; cursor: pointer; }
     .nav-item.active { color: #1a73e8; border-bottom: 3px solid #1a73e8; }
     .profile-section { display: flex; align-items: center; gap: 12px; width: 250px; justify-content: flex-end; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ddd url('https://ui-avatars.com/api/?name=Jhomari+Gandionco&background=0D8ABC&color=fff'); background-size: cover; }
+    
+    /* Avatar style updated to handle dynamic images */
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #ddd; background-size: cover; background-position: center; }
     
     /* Logout Button */
     .logout-btn { margin-left: 15px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; transition: 0.2s; padding: 5px; }
@@ -81,7 +78,7 @@ session_start();
     .class-banner-content h1 { margin: 0; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .virtual-btn { background-color: rgba(255, 255, 255, 0.9); color: #1a73e8; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     
-    /* CLASS CODE BOX (New) */
+    /* CLASS CODE BOX */
     .class-code-box {
         position: absolute; top: 20px; right: 20px;
         background: rgba(255, 255, 255, 0.9); padding: 10px 15px;
@@ -120,9 +117,14 @@ session_start();
     .icon-quiz { background: #1a73e8; }
 
     #detailView { display: none; }
+    
+    /* Loading Overlay */
+    #global-loader { position: fixed; inset:0; background:white; z-index:3000; display:flex; justify-content:center; align-items:center; font-size:18px; color:#666; }
 </style>
 </head>
 <body>
+
+    <div id="global-loader">Loading...</div>
 
     <header>
         <div class="logo-section" onclick="window.location.href='Dashboard.php'">
@@ -135,10 +137,10 @@ session_start();
         </nav>
         <div class="profile-section">
             <div style="text-align:right;">
-                <h4 style="margin:0; font-size:14px;">Prof. Jhomari</h4>
+                <h4 id="profile-name" style="margin:0; font-size:14px;">Loading...</h4>
                 <span style="font-size:12px; color:#777;">Teacher</span>
             </div>
-            <div class="avatar"></div>
+            <div class="avatar" id="profile-avatar"></div>
             <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
     </header>
@@ -183,8 +185,8 @@ session_start();
                                 <p id="bannerSubtitle">...</p>
                             </div>
                             <button class="virtual-btn" onclick="startMeeting()">
-    <i class="fa-solid fa-video"></i> Virtual Class
-</button>
+                                <i class="fa-solid fa-video"></i> Virtual Class
+                            </button>
                         </div>
                     </div>
                     <div id="streamFeedArea" style="margin-top:30px;">Loading stream...</div>
@@ -274,31 +276,77 @@ session_start();
             <div class="modal-footer"><button class="btn-cancel" onclick="closeAllModals()">Cancel</button><button class="btn-go" id="aiBtn" onclick="generateQuiz()">Generate</button></div>
         </div>
     </div>
-<div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
-    <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
-        <div class="modal-header">
-            <h2 id="jitsiTitle">Virtual Class</h2>
-            <button class="btn-cancel" onclick="closeJitsi()">Close Meeting</button>
+
+    <div id="jitsiModal" class="modal-overlay" style="background: rgba(0,0,0,0.9);">
+        <div class="modal-content" style="width: 90%; height: 90%; max-width: none;">
+            <div class="modal-header">
+                <h2 id="jitsiTitle">Virtual Class</h2>
+                <button class="btn-cancel" onclick="closeJitsi()">Close Meeting</button>
+            </div>
+            <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
         </div>
-        <div id="jitsi-container" style="height: calc(100% - 60px); width: 100%;"></div>
     </div>
-</div>
+
 <script>
     const supabaseUrl = 'https://nhrcwihvlrybpophbhuq.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocmN3aWh2bHJ5YnBvcGhiaHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxOTU1NzgsImV4cCI6MjA4Mzc3MTU3OH0.ByGK-n-gN0APAruRw6c3og5wHCO1zuE7EVSvlT-F6_0';
     let supabaseClient;
-    const currentUser = { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" };
+    
+    // CHANGED: Use a variable that will be populated dynamically
+    let currentUser = null; 
     let currentClassId = null;
+    let userFullName = "Teacher"; // Store name for Jitsi
 
     try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); } 
     catch (e) { console.error(e); }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    // --- MAIN INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Get Session
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        if (!session) {
+            // No session? Redirect to login
+            window.location.href = 'teacher_login.php';
+            return;
+        }
+
+        currentUser = session.user;
+
+        // 2. Fetch User Profile
+        await fetchUserProfile();
+
+        // 3. Remove Loader
+        document.getElementById('global-loader').style.display = 'none';
+
+        // 4. Handle Routing
         const urlParams = new URLSearchParams(window.location.search);
         const cid = urlParams.get('class_id');
         if (cid) openClass(cid); 
         else fetchClasses(); 
     });
+
+    async function fetchUserProfile() {
+        try {
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('full_name, role')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (profile) {
+                userFullName = profile.full_name;
+                // Update Name
+                document.getElementById('profile-name').innerText = profile.full_name;
+                
+                // Update Avatar
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=0D8ABC&color=fff`;
+                document.getElementById('profile-avatar').style.backgroundImage = `url('${avatarUrl}')`;
+            }
+        } catch (err) {
+            console.error("Profile Error:", err);
+        }
+    }
 
     function showFile(input, txtId) { 
         if(input.files[0]) { 
@@ -383,7 +431,7 @@ session_start();
                     <div class="action-icon icon-edit" onclick="openEditModal('${cls.id}', '${cls.title}', '${cls.section}')"><i class="fa-solid fa-pen"></i></div>
                     <div class="action-icon icon-del" onclick="deleteClass('${cls.id}')"><i class="fa-solid fa-trash"></i></div>
                 </div>
-                <div onclick="openClass(${cls.id})">
+                <div onclick="openClass('${cls.id}')">
                     <div class="class-image"><img src="${imgs[idx % imgs.length]}"></div>
                     <div class="class-text-content">
                         <div class="class-title">${cls.title}</div>
@@ -501,14 +549,14 @@ session_start();
         const section = document.getElementById('newClassSection').value;
         if(!title) return alert("Required");
         
-        // Generate Unique Code (7 chars)
+        // Generate Unique Code
         const code = Math.random().toString(36).substring(2, 9).toUpperCase();
 
         await supabaseClient.from('classes').insert([{ 
             teacher_id: currentUser.id, 
             title, 
             section,
-            class_code: code // Store the generated code
+            class_code: code 
         }]);
         closeAllModals();
         fetchClasses();
@@ -558,64 +606,62 @@ session_start();
         if (confirm("Are you sure you want to log out?")) {
             try {
                 if (supabaseClient.auth) await supabaseClient.auth.signOut();
-                window.location.href = 'index.php';
-            } catch (err) { console.error("Logout Error:", err); window.location.href = 'index.php'; }
+                window.location.href = 'teacher_login.php';
+            } catch (err) { console.error("Logout Error:", err); window.location.href = 'teacher_login.php'; }
         }
     }
+
     let jitsiApi = null;
 
-function startMeeting() {
-    // Generate a unique room name to prevent other users from accidentally joining
-    const roomName = "TechHub_Room_" + currentClassId + "_" + Math.floor(Math.random() * 1000);
-    const title = document.getElementById('bannerTitle').innerText;
-    
-    document.getElementById('jitsiTitle').innerText = "Virtual Class: " + title;
-    document.getElementById('jitsiModal').style.display = 'flex';
+    function startMeeting() {
+        const roomName = "TechHub_Room_" + currentClassId + "_" + Math.floor(Math.random() * 1000);
+        const title = document.getElementById('bannerTitle').innerText;
+        
+        document.getElementById('jitsiTitle').innerText = "Virtual Class: " + title;
+        document.getElementById('jitsiModal').style.display = 'flex';
 
-    // Target the community server
-    const domain = "meet.ffmuc.net"; 
-    
-    const options = {
-        roomName: roomName,
-        width: "100%",
-        height: "100%",
-        parentNode: document.querySelector('#jitsi-container'),
-        userInfo: {
-            displayName: "Prof. Jhomari" 
-        },
-        configOverwrite: {
-            startWithAudioMuted: true,
-            startWithVideoMuted: false,
-            prejoinPageEnabled: false, // Skips the 'Allow Camera' lobby for faster entry
-            disableWelcomePage: true   // Prevents redirecting to the Jitsi home page on hangup
-        },
-        interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: [
-                'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                'security'
-            ],
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            DEFAULT_REMOTE_DISPLAY_NAME: 'Student'
-        }
-    };
+        const domain = "meet.ffmuc.net"; 
+        
+        const options = {
+            roomName: roomName,
+            width: "100%",
+            height: "100%",
+            parentNode: document.querySelector('#jitsi-container'),
+            userInfo: {
+                displayName: userFullName // CHANGED: Uses dynamic name
+            },
+            configOverwrite: {
+                startWithAudioMuted: true,
+                startWithVideoMuted: false,
+                prejoinPageEnabled: false, 
+                disableWelcomePage: true
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                    'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                    'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                    'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                    'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                    'security'
+                ],
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                DEFAULT_REMOTE_DISPLAY_NAME: 'Student'
+            }
+        };
 
-    if (jitsiApi) jitsiApi.dispose();
-    jitsiApi = new JitsiMeetExternalAPI(domain, options);
-}
-function closeJitsi() {
-    if (jitsiApi) {
-        jitsiApi.dispose();
-        jitsiApi = null;
+        if (jitsiApi) jitsiApi.dispose();
+        jitsiApi = new JitsiMeetExternalAPI(domain, options);
     }
-    document.getElementById('jitsiModal').style.display = 'none';
-    document.getElementById('jitsi-container').innerHTML = ''; // Clear the div
-}
+    function closeJitsi() {
+        if (jitsiApi) {
+            jitsiApi.dispose();
+            jitsiApi = null;
+        }
+        document.getElementById('jitsiModal').style.display = 'none';
+        document.getElementById('jitsi-container').innerHTML = ''; 
+    }
 </script>
-<script src="https://meet.ffmuc.net/external_api.js"></script>
 </body>
 </html>
