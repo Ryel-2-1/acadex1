@@ -165,7 +165,7 @@ session_start();
                 fetchRecentActivity()
             ]);
             
-            initCalendar();
+            // initCalendar() removed — renderCalendar is called inside fetchStatsAndCalendar with DB data
 
             // Hide loading screen
             document.getElementById('loading-screen').style.display = 'none';
@@ -285,7 +285,18 @@ session_start();
 
                 document.getElementById('deadlineCount').innerText = deadlines ? deadlines.length : 0;
                 
-                const eventDates = deadlines ? deadlines.map(d => new Date(d.due_date).getDate()) : [];
+                // Build unique list of day numbers for the CURRENT month/year so calendar markers appear correctly
+                const now = new Date();
+                const eventSet = new Set();
+                if (Array.isArray(deadlines)) {
+                    deadlines.forEach(d => {
+                        const dt = new Date(d.due_date);
+                        if (dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth()) {
+                            eventSet.add(dt.getDate());
+                        }
+                    });
+                }
+                const eventDates = Array.from(eventSet);
                 renderCalendar(eventDates);
             } catch (err) { 
                 // If table doesn't exist yet, ignore error

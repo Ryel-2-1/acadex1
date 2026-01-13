@@ -369,7 +369,8 @@ session_start();
         data.forEach((cls) => {
             const card = document.createElement('div');
             card.className = 'class-card';
-            card.innerHTML = `<div onclick="openClass('${cls.id}')"><div class="class-image"></div><div class="class-text-content"><div class="class-title">${cls.title}</div><div class="class-subtitle">${cls.section}</div></div></div>`;
+            const gradient = pickGradient(cls.id || cls.title);
+            card.innerHTML = `<div onclick="openClass('${cls.id}')"><div class="class-image" style="background: ${gradient};"></div><div class="class-text-content"><div class="class-title">${cls.title}</div><div class="class-subtitle">${cls.section}</div></div></div>`;
             grid.appendChild(card);
         });
     }
@@ -712,6 +713,20 @@ session_start();
             });
         } else { sHtml += `<div style="color:#777; font-style:italic;">No students enrolled yet.</div>`; }
         studentArea.innerHTML = sHtml;
+    }
+
+    // add deterministic gradient generator for thumbnails
+    function pickGradient(seed) {
+        if (!seed) seed = Math.random().toString();
+        let hash = 0;
+        for (let i = 0; i < seed.length; i++) {
+            hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+            hash |= 0;
+        }
+        hash = Math.abs(hash);
+        const h1 = hash % 360;
+        const h2 = (h1 + 40 + (hash % 80)) % 360;
+        return `linear-gradient(135deg, hsl(${h1},70%,60%), hsl(${h2},70%,48%))`;
     }
 </script>
 </body>
