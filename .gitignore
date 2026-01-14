@@ -1,0 +1,17 @@
+# Environment files (sensitive)
+.env
+.env.local
+
+# Composer dependencies
+/vendor/
+
+# Node
+/node_modules/
+
+# IDE/editor settings
+/.idea/
+/.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
