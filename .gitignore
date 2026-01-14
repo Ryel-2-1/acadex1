@@ -1,6 +1,7 @@
 # Environment files (sensitive)
 .env
-.env.local
+.env.*.local
+
 
 # Composer dependencies
 /vendor/
