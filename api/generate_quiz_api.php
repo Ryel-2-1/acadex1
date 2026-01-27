@@ -2,7 +2,7 @@
 // api/generate_quiz_api.php
 header('Content-Type: application/json');
 
-// DEBUG (you can turn off in production)
+// DEBUG (turn off in production)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -11,10 +11,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Smalot\PdfParser\Parser;
 
-// ⚠️ WARNING: in real apps, DO NOT hardcode API keys. Use env vars.
+// ✅ Use env var (recommended). Optional .env fallback.
 $apiKey = getenv('GOOGLE_API_KEY') ?: null;
 
-// Try to read a simple .env file (KEY=VALUE lines) in project root if env var isn't set
 if (!$apiKey) {
     $envFile = __DIR__ . '/../.env';
     if (file_exists($envFile)) {
@@ -25,35 +24,34 @@ if (!$apiKey) {
     }
 }
 
-if (!$apiKey) {
-    throw new Exception("Missing API key: set GOOGLE_API_KEY environment variable or create a .env with GOOGLE_API_KEY.");
-}
-
-
 try {
+    if (!$apiKey) {
+        throw new Exception("Missing API key: set GOOGLE_API_KEY environment variable (recommended) or create a .env with GOOGLE_API_KEY.");
+    }
+
     if (!isset($_FILES['pdf_file'])) {
         throw new Exception("No file uploaded");
     }
 
-    // 0. QUESTION TYPE (mcq / open)
+    // 0) QUESTION TYPE (mcq / open)
     $questionType = isset($_POST['question_type']) ? strtolower(trim($_POST['question_type'])) : 'mcq';
     if ($questionType !== 'mcq' && $questionType !== 'open') {
         $questionType = 'mcq';
     }
 
-    // 1. EXTRACT TEXT FROM PDF
+    // 1) EXTRACT TEXT FROM PDF
     $parser = new Parser();
     $pdf = $parser->parseFile($_FILES['pdf_file']['tmp_name']);
     $text = $pdf->getText();
 
-    if (trim($text) == "") {
+    if (trim($text) === "") {
         throw new Exception("PDF is empty.");
     }
 
-    // limit length so prompt isn't too huge
+    // Limit length so prompt isn't too huge
     $cleanText = substr($text, 0, 4000);
 
-    // 2. PROMPT BUILDING
+    // 2) PROMPT BUILDING
     $userPrompt = isset($_POST['custom_prompt']) ? $_POST['custom_prompt'] : "";
 
     if ($questionType === 'mcq') {
@@ -87,8 +85,8 @@ TEXT SOURCE:
 $cleanText
 ";
 
-    // 3. SEND TO GOOGLE GEMINI
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $apiKey;
+    // 3) SEND TO GOOGLE GEMINI (✅ key in header, NOT in URL)
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     $data = [
         "contents" => [
@@ -100,11 +98,14 @@ $cleanText
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'x-goog-api-key: ' . $apiKey,
+    ]);
 
-    // DEV ONLY: disable SSL verification
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    // ✅ Keep SSL verification ON (recommended)
+    // curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 
     $response = curl_exec($ch);
     if (curl_errno($ch)) {
@@ -112,11 +113,11 @@ $cleanText
     }
     curl_close($ch);
 
-    // 4. PROCESS RESPONSE
+    // 4) PROCESS RESPONSE
     $jsonResponse = json_decode($response, true);
 
     if (isset($jsonResponse['error'])) {
-        throw new Exception("Google API Error: " . $jsonResponse['error']['message']);
+        throw new Exception("Google API Error: " . ($jsonResponse['error']['message'] ?? 'Unknown error'));
     }
 
     if (!isset($jsonResponse['candidates'][0]['content']['parts'][0]['text'])) {
@@ -150,14 +151,11 @@ $cleanText
         }
 
         if (!isset($q['options']) || !is_array($q['options'])) {
-            $q['options'] = ($q['type'] === 'mcq') ? [] : [];
+            $q['options'] = [];
         }
-        if (!isset($q['question'])) {
-            $q['question'] = '';
-        }
-        if (!isset($q['answer'])) {
-            $q['answer'] = '';
-        }
+
+        if (!isset($q['question'])) $q['question'] = '';
+        if (!isset($q['answer'])) $q['answer'] = '';
     }
 
     echo json_encode(['success' => true, 'questions' => $questions]);
